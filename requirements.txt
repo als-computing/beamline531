@@ -1,0 +1,12 @@
+fastapi==0.66.0
+mongomock==4.0.0
+numpy==1.21.6
+ortools==9.3.10497
+pydantic==1.8.2
+pymongo==3.12.0
+pytest==7.1.1
+requests==2.25.1
+starlette==0.14.2
+typing-extensions==3.10.0.0
+uuid==1.30
+uvicorn==0.14.0
