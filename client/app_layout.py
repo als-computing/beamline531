@@ -1,15 +1,16 @@
-from dash import Dash, html
+from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 
-from helper_utils import load_bl_controls
+from helper_utils import load_bl_controls, test_control
 
 
 #### SETUP DASH APP ####
-external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/style.css"]
+external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/style.css", 
+                        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css']
 app = Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
-app.title = "LBL | Beamline 5.3.1"
-app._favicon = 'LBL_logo.ico'
+app.title = "BL 5.3.1"
+app._favicon = 'LBL_icon.ico'
 
 beamline = 'als_5_3_1'
 version = '0'
@@ -27,21 +28,27 @@ HEADER = dbc.Navbar(
                         md="auto"
                     ),
                     dbc.Col(
-                        html.H3("LBL | Beamline 5.3.1"),
+                        html.Div(
+                            id = 'app-title',
+                            children=[html.H3("Advanced Light Source | Beamline 5.3.1")],
+                        ),
                         md=True,
-                        align="center"
+                        align="center",
                     )
                 ]),
                 dbc.Row([
                     dbc.Col([
                         dbc.NavbarToggler(id="navbar-toggler"),
-                        dbc.Collapse(
+                        html.Div(
                             dbc.Nav([
-                                dbc.NavIten(dbc.Button("fa fa-github",
+                                dbc.NavItem(
+                                    dbc.Button(className="fa fa-github",
+                                               style={"font-size": 40, "margin-right": "1rem", "color": "#00313C", "background-color": "white"},
                                                href="https://github.com/als-computing/beamline531")
                                                ),
-                                dbc.NavIten(
-                                    dbc.Button("fa fa-question-circle-o",
+                                dbc.NavItem(
+                                    dbc.Button(className="fa fa-question-circle-o",
+                                               style={"font-size": 40, "color": "#00313C", "background-color": "white"},
                                                href="https://github.com/als-computing/beamline531")
                                                )
                             ],
@@ -52,7 +59,7 @@ HEADER = dbc.Navbar(
             ],
             fluid=True),
         dark=True,
-        color="dark",
+        color="#00313C",
         sticky="top"
         )
 
@@ -62,7 +69,9 @@ BL_INPUT = [dbc.Card(
                 children=[
                     dbc.CardHeader("Controls"),
                     dbc.CardBody(html.Div(id='bl-controls',
-                                          children=load_bl_controls(controls_url)))
+                                          children=test_control() #load_bl_controls(app, controls_url)
+                                          )
+                                )
                     ]
                 )
             ]
@@ -90,8 +99,9 @@ app.layout = html.Div(
         dbc.Container([
                 dbc.Row([
                     dbc.Col(BL_INPUT, width=4),
-                    dbc.Col(BL_OUTPUT, width=8)
-                ])], 
+                    dbc.Col(BL_OUTPUT, width=8),
+                ]),
+                dcc.Interval(id='refresh-interval')], 
                 fluid=True
                 ),
     ]
