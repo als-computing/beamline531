@@ -1,7 +1,7 @@
 from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 
-from helper_utils import load_bl_controls, test_control
+from helper_utils import MonoControl
 
 
 #### SETUP DASH APP ####
@@ -15,6 +15,8 @@ app._favicon = 'LBL_icon.ico'
 beamline = 'als_5_3_1'
 version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
+MONO_CONTROL = MonoControl(prefix="IOC:m1", name="Mono theta [deg]")
+MONO_CONTROL.connect()
 
 
 ### BEGIN DASH CODE ###
@@ -64,17 +66,8 @@ HEADER = dbc.Navbar(
         )
 
 
-BL_INPUT = [dbc.Card(
-                id='bl-input',
-                children=[
-                    dbc.CardHeader("Controls"),
-                    dbc.CardBody(html.Div(id='bl-controls',
-                                          children=test_control() #load_bl_controls(app, controls_url)
-                                          )
-                                )
-                    ]
-                )
-            ]
+BL_INPUT = html.Div(id='bl-controls',
+                    children=MONO_CONTROL.gui_comp)
 
 
 BL_OUTPUT = [dbc.Card(
