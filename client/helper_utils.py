@@ -26,19 +26,21 @@ class MonoControl(BaseModel):
         Defines the GUI representation of the control and initializes it's connection
         '''
         try:
+            # Connecting to the motor
             self.control = EpicsMotor(self.prefix, name=self.name)
             self.control.wait_for_connection(timeout=self.timeout)
             self.status = 'CONNECTED'
-            current_position = self.read()
-            disable = False
+            current_position = self.read()      # update current position
+            disable = False                     # the action buttons are not disabled
         except Exception as e:
+            # the connection was not succesful
             self.status = 'DISCONNECTED'
-            current_position = 0
-            disable = True
+            current_position = 0                # current position goes to 0
+            disable = True                      # disable action buttons
             logging.error(f'Motor not found due to: {e}')
         # GUI component definition
         status_value = self.status == 'CONNECTED'
-        self.gui_comp =[dbc.Card(id='m1-control',
+        self.gui_comp =[dbc.Card(id='m1-control',       # OPTION 1
                                  children=[
                                         dbc.CardHeader(dbc.Row([
                                                         dbc.Col('MONO THETA OPTION 1'),
@@ -71,7 +73,7 @@ class MonoControl(BaseModel):
                                         ])
                                     ],
                                 ),
-                         dbc.Card(id='m1-control2',
+                         dbc.Card(id='m1-control2',     # OPTION 2
                                   children=[
                                         dbc.CardHeader(dbc.Row([
                                                         dbc.Col('MONO THETA OPTION 2'),
@@ -96,12 +98,18 @@ class MonoControl(BaseModel):
                         ]
     
     def move(self, target_position):
+        '''
+        Move the motor to the target position
+        '''
         try:
             self.control.move(target_position, wait=False)
         except Exception as e:
             logging.error(f'Motor could not move due to: {e}')
 
     def read(self):
+        '''
+        Read the current position of the motor
+        '''
         try:
             reading = self.read()
             return reading[self.name]['value']

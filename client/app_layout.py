@@ -12,14 +12,17 @@ server = app.server
 app.title = "BL 5.3.1"
 app._favicon = 'LBL_icon.ico'
 
+# Placeholder for control API
 beamline = 'als_5_3_1'
 version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
+
 MONO_CONTROL = MonoControl(prefix="IOC:m1", name="Mono theta [deg]")
 MONO_CONTROL.connect()
 
 
 ### BEGIN DASH CODE ###
+# APP HEADER
 HEADER = dbc.Navbar(
             dbc.Container([
                 dbc.Row([
@@ -66,10 +69,12 @@ HEADER = dbc.Navbar(
         )
 
 
+# BEAMLINE INPUTS (CONTROLS)
 BL_INPUT = html.Div(id='bl-controls',
                     children=MONO_CONTROL.gui_comp)
 
 
+# BEAMLINE OUTPUTS (SCANS, CAMERAS, ETC)
 BL_OUTPUT = [dbc.Card(
                 children=[
                     dbc.CardHeader("Camera"),
@@ -85,7 +90,7 @@ BL_OUTPUT = [dbc.Card(
             ]
 
 
-##### DEFINE LAYOUT ####
+##### DEFINE LAYOUT #####
 app.layout = html.Div(
     [
         HEADER,
@@ -94,7 +99,7 @@ app.layout = html.Div(
                     dbc.Col(BL_INPUT, width=4),
                     dbc.Col(BL_OUTPUT, width=8),
                 ]),
-                dcc.Interval(id='refresh-interval')], 
+                dcc.Interval(id='refresh-interval')],   # time interval to refresh the app, default 1000 milliseconds
                 fluid=True
                 ),
     ]
