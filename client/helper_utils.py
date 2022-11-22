@@ -111,7 +111,7 @@ class MonoControl(BaseModel):
         Read the current position of the motor
         '''
         try:
-            reading = self.read()
+            reading = self.control.read()
             return reading[self.name]['value']
         except Exception as e:
             logging.error(f'Could not read motor position due to: {e}')
