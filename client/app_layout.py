@@ -1,7 +1,7 @@
 from dash import Dash, html, dcc
 import dash_bootstrap_components as dbc
 
-from helper_utils import MonoControl
+from helper_utils import BasicControl, BasicSensor
 
 
 #### SETUP DASH APP ####
@@ -17,8 +17,18 @@ beamline = 'als_5_3_1'
 version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
-MONO_CONTROL = MonoControl(prefix="IOC:m1", name="Mono theta [deg]")
+# Manually defining the controls for now
+MONO_CONTROL = BasicControl(prefix="IOC:m1", name="Mono theta [deg]", id="mono", min=0, max=100, units='°')
 MONO_CONTROL.connect()
+
+LONG_CONTROL = BasicControl(prefix="IOC:m3", name="Longitudinal stage [deg]", id="long", min=0, max=100, units='°')
+LONG_CONTROL.connect()
+
+CURRENT_SENSOR = BasicSensor(prefix="Bl201-beamstop:current", name="Current sensor", id="current", units="\u03BCA")
+CURRENT_SENSOR.create_gui()
+
+CONTROL_LIST = [MONO_CONTROL, LONG_CONTROL, CURRENT_SENSOR]
+CONTROL_GUI = MONO_CONTROL.gui_comp + LONG_CONTROL.gui_comp + CURRENT_SENSOR.gui_comp
 
 
 ### BEGIN DASH CODE ###
@@ -71,7 +81,7 @@ HEADER = dbc.Navbar(
 
 # BEAMLINE INPUTS (CONTROLS)
 BL_INPUT = html.Div(id='bl-controls',
-                    children=MONO_CONTROL.gui_comp)
+                    children=CONTROL_GUI)
 
 
 # BEAMLINE OUTPUTS (SCANS, CAMERAS, ETC)
@@ -84,7 +94,38 @@ BL_OUTPUT = [dbc.Card(
              dbc.Card(
                 children=[
                     dbc.CardHeader("Scan"),
-                    dbc.CardBody(html.Div(id='bl-scan'))
+                    dbc.CardBody(html.Div(id='bl-scan',
+                                          children=[
+                                            dbc.Row(
+                                                html.Img()
+                                            ),
+                                            dbc.Row([
+                                                dbc.Col([
+                                                    dbc.Label('Minimum', style={'textAlign': 'center'}),
+                                                    dbc.Input()
+                                                ]),
+                                                dbc.Col([
+                                                    dbc.Label('Step', style={'textAlign': 'center'}),
+                                                    dbc.Input()
+                                                ]),
+                                                dbc.Col([
+                                                    dbc.Label('Maximum', style={'textAlign': 'center'}),
+                                                    dbc.Input()
+                                                ]),
+                                                dbc.Col(
+                                                    dbc.Button('GO',
+                                                               color="success",
+                                                               style={'width': '100%'}),
+                                                    align="end"
+                                                ),
+                                                dbc.Col(
+                                                    dbc.Button('ABORT',
+                                                               color="danger",
+                                                               style={'width': '100%'}),
+                                                    align="end"
+                                                )
+                                           ])
+                                          ]))
                     ]
                 )
             ]
