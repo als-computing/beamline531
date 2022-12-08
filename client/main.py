@@ -6,8 +6,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from dash.exceptions import PreventUpdate
 
-from app_layout import app, CONTROL_LIST
-from helper_utils import find_control
+from app_layout import app, COMPONENT_LIST
 
 
 @app.callback(
@@ -42,11 +41,11 @@ def move_control(target_go, target_left, target_right, target_step, target_absol
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
     id_dict = json.loads(changed_id.split('.')[0])     # Get base id of control
-    control = find_control(CONTROL_LIST, id_dict['base'])
+    control = COMPONENT_LIST.find_component(id_dict['base'])
     # Checks if the control was found succesfully
     if control:
         # Checks that the motor is connected
-        if control.status == 'CONNECTED':
+        if control.status == 'Online':
             # Move to absolute position
             if 'target-go' in changed_id:
                 if target_absolute: 
@@ -68,30 +67,91 @@ def move_control(target_go, target_left, target_right, target_step, target_absol
 
     State({'base': ALL, 'type': 'current-pos'}, 'id'),
 )
-def read_position(refresh_interval, controls_ids):
+def read_component(refresh_interval, components_ids):
     '''
-    This callback reads and updates the position of all the controls
+    This callback reads and updates the position of all the components
     Args:
         refresh_interval:   Time interval between updates
-        controls_ids:       List of all the controls IDs
+        components_ids:     List of all the components IDs
     Output:
-        current position of all the controls
+        current reading of all the components
     '''
     response_list = []
-    for control_base_id in controls_ids:
-        current_pos = dash.no_update
-        control = find_control(CONTROL_LIST, control_base_id['base'])
-        # Checks if the control was found succesfully
-        if control:
+    for component_base_id in components_ids:
+        component = COMPONENT_LIST.find_component(component_base_id['base'])
+        current_read = '0'
+        # Checks if the component was found succesfully
+        if component:
+            current_read = f'0{component.units}'
             # Checks that the motor is connected
-            if control.status == 'CONNECTED':
-                # Given the refresh interval, read current position of motor
-                reading = control.read()
+            if component.status == 'Online':
+                # Given the refresh interval, read component
+                reading = component.read()
                 if reading:
-                    current_pos = f'{current_pos}{control.units}'
-        response_list.append(current_pos)
+                    current_read = f'{reading}{component.units}'
+        response_list.append(current_read)
     return response_list
-    
+
+
+@app.callback(
+    Output({'base': MATCH, 'type': 'on-off'}, 'on'),
+    Output({'base': MATCH, 'type': 'on-off'}, 'label'),
+
+    Input({'base': MATCH, 'type': 'on-off'}, 'on'),
+
+    State({'base': MATCH, 'type': 'on-off'}, 'label'),
+
+    prevent_initial_call=True
+)
+def turn_on_off(on_off_clicks, current_label):
+    '''
+    This callback turns components ON/OFF per user's request
+    Args:
+        on_off_clicks:  Button ON/OFF has been clicked
+        current_label:  Current label in component header
+    Returns:
+        ON/OFF status
+        ON/OFF label
+    '''
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    id_dict = json.loads(changed_id.split('.')[0])     # Get base id of component
+    component = COMPONENT_LIST.find_component(id_dict['base'])
+    # Checks if the component was found succesfully
+    if component:
+        # Checks if the component is not connected
+        if component.status == 'Offline':
+            # Try to connect
+            component.connect()
+        else:
+            component.status = not(component.status)
+        current_label['label'] = component.status
+        status = component.status
+    else:
+        status = 'Offline'
+    return status == 'Online', current_label        
+
+
+# @app.callback(
+#     Output('scan-output', 'children'),
+
+#     Input('scan-go', 'n_clicks'),
+#     Input('scan-abort', 'n_clicks')
+# )
+# def start_scan(scan_go, scan_abort):
+#     '''
+#     This callback starts a scan
+#     '''
+
+#     from bluesky.plans import count
+
+#     dets = [bl531_current]   # a list of any number of detectors
+#     motors = bl531_mono
+
+#     RE(count(dets))
+
+#     from bluesky.plans import scan
+#     RE(scan(dets, motors, 20, 21, 11))
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0', port=8052)

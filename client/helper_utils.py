@@ -1,53 +1,66 @@
 import logging
+from enum import Enum
 
 from dash import html, dcc
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 from epics import caget, caput, cainfo
-from ophyd import EpicsMotor
+from ophyd import EpicsMotor, EpicsSignal
 from pydantic import BaseModel, Field
 import requests
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 
-class BasicSensor(BaseModel):
-    schema_version: int = 0         # data schema version
+###################################################### CLASSES ######################################################
+
+class ComponentType(str, Enum):
+    motor = "motor"
+    signal = "signal"
+
+
+class BasicComponent(BaseModel):
+    schema_version: int = 1                         # data schema version
     id: str = Field(description="base id for dash GUI components")
+    type: ComponentType
     name: str = Field(description="epics name")
     prefix: str = Field(description="epics prefix")
     units: str = Field(description="units")
-    gui_comp: Optional[List] = []   # GUI component
-    sensor: Optional[Any] = None    # epics object
-    status: str = 'Offline'
+    min: Optional[float] = Field(description="minimum position")
+    max: Optional[float] = Field(description="maximum position")
+    gui_comp: Optional[List] = []                   # GUI component
+    comp: Optional[Any] = None                      # ophyd object
+    status: str = 'Online'
 
-    def create_header(self, status_value):
+    def create_header(self):
         '''
-        Creates the header for the GUI component of the control according to it's connection status
+        Creates the header for the GUI component of the component according to it's connection status
         '''
         header = dbc.Row(
                     [dbc.Col(self.name),
-                     dbc.Col([daq.Indicator(labelPosition='right', 
-                                            value=status_value, 
-                                            label={'label': self.status, 
-                                                   'style': {'margin-left': '1rem', 'margin-top': '0rem'}},
-                                            style={'display': 'inline-block'}
-                              )], 
+                     dbc.Col(daq.PowerButton(id={'base': self.id, 'type': 'on-off'},
+                                             on=(self.status=='Online'),
+                                             label={'label': self.status, 
+                                                    'style': {'margin-left': '1rem', 'margin-top': '0rem',
+                                                              'font-size': '15px'}},
+                                             size=30,
+                                             labelPosition='right',
+                                             style={'display': 'inline-block', 'margin-top': '0rem', 
+                                                    'margin-bottom': '0rem'}),
                              style={'textAlign': 'right'})
                     ], 
                     no_gutters=True, justify='center', align='center'
                  )
         return header
     
-    def create_gui(self):
+    def create_sensor_gui(self, current_reading):
         '''
-        Creates the GUI components for the control
+        Creates the GUI components for the sensor
         '''
         status_value = self.status == 'Online'
-        current_reading = 0
-        header = self.create_header(status_value)
+        header = self.create_header()
         self.gui_comp = [dbc.Card(id={'base': self.id, 'type': 'control'},
                                  children=[
                                     dbc.CardHeader(header),
@@ -58,63 +71,17 @@ class BasicSensor(BaseModel):
                                              dbc.Col(html.P(id={'base': self.id, 'type': 'current-pos'}, 
                                                             children=f'{current_reading}{self.units}', 
                                                             style={'textAlign': 'left'}))],
-                                        ),
-                                        # ON/OFF Switch
-                                        daq.BooleanSwitch(id={'base': self.id, 'type': 'on-off-switch'}, 
-                                                          label='ON/OFF',
-                                                          on=status_value)
+                                        )
                                     ])
                                 ])
                         ]
     
-    def read(self):
+    def create_motor_gui(self, current_position):
         '''
-        Reads the current position of the sensor
-        '''
-        try:
-            reading = caget(self.prefix)
-            return reading
-        except Exception as e:
-            logging.error(f'Could not read sensor due to: {e}')
-    
-
-class BasicControl(BaseModel):
-    schema_version: int = 0         # data schema version
-    id: str = Field(description="base id for dash GUI components")
-    prefix: str = Field(description="epics prefix")
-    name: str = Field(description="epics name")
-    min: float = Field(description="minimum position")
-    max: float = Field(description="maximum position")
-    units: str = Field(description="units")
-    timeout: Optional[float] = 2.0  # connection timeout
-    gui_comp: Optional[List] = []   # GUI component
-    control: Optional[Any] = None   # ophyd object
-    status: str = 'Offline'         # connection status
-
-    def create_header(self, status_value):
-        '''
-        Creates the header for the GUI component of the control according to it's connection status
-        '''
-        header = dbc.Row(
-                    [dbc.Col(self.name),
-                     dbc.Col([daq.Indicator(labelPosition='right', 
-                                            value=status_value, 
-                                            label={'label': self.status, 
-                                                   'style': {'margin-left': '1rem', 'margin-top': '0rem'}},
-                                            style={'display': 'inline-block'}
-                              )], 
-                             style={'textAlign': 'right'})
-                    ], 
-                    no_gutters=True, justify='center', align='center'
-                 )
-        return header
-    
-    def create_gui(self, current_position):
-        '''
-        Creates the GUI components for the control
+        Creates the GUI components for motor
         '''
         status_value = self.status == 'Online'
-        header = self.create_header(status_value)
+        header = self.create_header()
         self.gui_comp = [dbc.Card(id={'base': self.id, 'type': 'control'},
                                  children=[
                                     dbc.CardHeader(header),
@@ -177,58 +144,78 @@ class BasicControl(BaseModel):
                                                 # Cache variable to keep track of the target value when a new
                                                 # movement is requested before the previous one has completed
                                                 dcc.Store(id={'base': self.id, 'type': 'target-value'},
-                                                          data=0)
+                                                          data=current_position)
                                             ])
                                         ])
                                     ])
                                 ])
                         ]
 
-
     def connect(self):
         '''
-        Defines the GUI representation of the control and initializes it's connection
+        Defines the GUI representation of the component and initializes it's connection
         '''
         try:
-            # Connecting to the motor
-            self.control = EpicsMotor(self.prefix, name=self.name)
-            self.control.wait_for_connection(timeout=self.timeout)
+            # Connecting to the component
+            if self.type == 'motor':
+                self.comp = EpicsMotor(self.prefix, name=self.name)
+            else:
+                self.comp = EpicsSignal(self.prefix, name=self.name)
+            self.comp.wait_for_connection(timeout=self.timeout)
             self.status = 'Online'
-            current_position = self.read()      # update current position
+            current_reading = self.read()      # update current position
         except Exception as e:
             # the connection was not succesful
             self.status = 'Offline'
-            current_position = 0                # current position goes to 0
-            logging.error(f'Motor not found due to: {e}')
-        self.create_gui(current_position)
+            current_reading = 0                # current position goes to 0
+            logging.error(f'Component {self.prefix} not found due to: {e}')
+        if self.type == 'motor':
+            self.create_motor_gui(current_reading)
+        else:
+            self.create_sensor_gui(current_reading)
     
     def read(self):
         '''
-        Reads the current position of the motor
+        Reads the component
         '''
         try:
-            reading = self.control.read()
+            reading = self.comp.read()
             return reading[self.name]['value']
         except Exception as e:
-            logging.error(f'Could not read motor position due to: {e}')
+            logging.error(f'Could not read component {self.prefix} due to: {e}')
     
     def move(self, target_position):
         '''
-        Moves the motor to the target position
+        Moves the motor to the target position.
         '''
         try:
-            self.control.move(target_position, wait=False)
+            self.comp.move(target_position, wait=False)
         except Exception as e:
-            logging.error(f'Motor could not move due to: {e}')
+            logging.error(f'Motor {self.prefix} could not move due to: {e}')
 
 
-def find_control(control_list, base_id):
-    '''
-    This function searches for the corresponding control within the control list
-    based on the value of base_id. If no control is found, returns None
-    '''
-    for control in control_list:
-        if control.id == base_id:
-            return control
-    logging.error(f'Base id {base_id} was not found among the list of controls.')
-    return None
+class BeamlineComponents(BaseModel):
+    comp_list: List[BasicComponent]
+
+    def get_gui(self):
+        '''
+        Retrieves the GUI components
+        '''
+        gui_comp_list = []
+        # Connect to all the components in the beamline
+        for component in self.comp_list:
+            component.connect()
+            # Retrieve GUI
+            gui_comp_list = gui_comp_list + component.gui_comp
+        return gui_comp_list
+    
+    def find_component(self, base_id):
+        '''
+        Searches for the corresponding component within the component list based on the 
+        value of base_id. If no component is found, returns None
+        '''
+        for component in self.comp_list:
+            if component.id == base_id:
+                return component
+        logging.error(f'Base id {base_id} was not found among the list of components.')
+        return None
