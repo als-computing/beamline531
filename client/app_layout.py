@@ -97,9 +97,6 @@ BL_OUTPUT = [dbc.Card(
                                         options=comp_list_to_options(COMPONENT_LIST.find_comp_type('motor'))
                                         )
                                     ),
-                                # [
-                                #         {'label': 'motor1', 'value': 'motor1'},
-                                #         {'label': 'motor2', 'value': 'motor2'},])),
                             dbc.Col(dbc.Button('Add Motor',
                                                id='add-motor',
                                                style={'width': '100%'}),
@@ -167,46 +164,7 @@ BL_OUTPUT = [dbc.Card(
 
                     ]),
                 ]
-             ),
-            #  dbc.Card(
-            #     children=[
-            #         dbc.CardHeader("Scan"),
-            #         dbc.CardBody(html.Div(id='bl-scan',
-            #                               children=[
-            #                                 dbc.Row(
-            #                                     html.Img()
-            #                                 ),
-            #                                 dbc.Row([
-            #                                     dbc.Col([
-            #                                         dbc.Label('Minimum', style={'textAlign': 'center'}),
-            #                                         dbc.Input()
-            #                                     ]),
-            #                                     dbc.Col([
-            #                                         dbc.Label('Step', style={'textAlign': 'center'}),
-            #                                         dbc.Input()
-            #                                     ]),
-            #                                     dbc.Col([
-            #                                         dbc.Label('Maximum', style={'textAlign': 'center'}),
-            #                                         dbc.Input()
-            #                                     ]),
-            #                                     dbc.Col(
-            #                                         dbc.Button('GO',
-            #                                                    id='scan-go',
-            #                                                    color="success",
-            #                                                    style={'width': '100%'}),
-            #                                         align="end"
-            #                                     ),
-            #                                     dbc.Col(
-            #                                         dbc.Button('ABORT',
-            #                                                    id='scan-abort',
-            #                                                    color="danger",
-            #                                                    style={'width': '100%'}),
-            #                                         align="end"
-            #                                     )
-            #                                ])
-            #                               ]))
-            #         ]
-            #     )
+             )
             ]
 
 
