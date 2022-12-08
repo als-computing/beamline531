@@ -149,17 +149,17 @@ BL_OUTPUT = [dbc.Card(
                         ]),
                         dbc.Row([
                             dbc.Col(
+                                dbc.Button('ABORT',
+                                            id='scan-abort',
+                                            color="danger",
+                                            style={'width': '100%'}),
+                            ),
+                            dbc.Col(
                                 dbc.Button('GO',
                                             id='scan-go',
                                             color="success",
                                             style={'width': '100%'}),
                             ),
-                            dbc.Col(
-                                dbc.Button('ABORT',
-                                            id='scan-abort',
-                                            color="danger",
-                                            style={'width': '100%'}),
-                            )
                         ])
 
                     ]),
