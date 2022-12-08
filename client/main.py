@@ -123,7 +123,7 @@ def turn_on_off(on_off_clicks, current_label):
             # Try to connect
             component.connect()
         else:
-            component.status = not(component.status)
+            component.status = 'Offline'
         current_label['label'] = component.status
         status = component.status
     else:
