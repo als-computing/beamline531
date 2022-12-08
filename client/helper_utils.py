@@ -220,3 +220,20 @@ class BeamlineComponents(BaseModel):
                 return component
         logging.error(f'Base id {base_id} was not found among the list of components.')
         return None
+    
+    def find_comp_type(self, comp_type):
+        '''
+        Filters the list of components based on a component type
+        '''
+        list_comp_type = []
+        for component in self.comp_list:
+            if component.type == ComponentType(comp_type):
+                list_comp_type.append(component)
+        return list_comp_type
+
+
+def comp_list_to_options(comp_list):
+    options=[]
+    for component in comp_list:
+        options.append({'label': component.name, 'value': component.id})
+    return options

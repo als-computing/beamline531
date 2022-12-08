@@ -1,7 +1,8 @@
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, dash_table
 import dash_bootstrap_components as dbc
 
 from helper_utils import BasicComponent, ComponentType, BeamlineComponents
+from helper_utils import comp_list_to_options
 
 
 #### SETUP DASH APP ####
@@ -89,42 +90,123 @@ BL_OUTPUT = [dbc.Card(
              dbc.Card(
                 children=[
                     dbc.CardHeader("Scan"),
-                    dbc.CardBody(html.Div(id='bl-scan',
-                                          children=[
-                                            dbc.Row(
-                                                html.Img()
-                                            ),
-                                            dbc.Row([
-                                                dbc.Col([
-                                                    dbc.Label('Minimum', style={'textAlign': 'center'}),
-                                                    dbc.Input()
-                                                ]),
-                                                dbc.Col([
-                                                    dbc.Label('Step', style={'textAlign': 'center'}),
-                                                    dbc.Input()
-                                                ]),
-                                                dbc.Col([
-                                                    dbc.Label('Maximum', style={'textAlign': 'center'}),
-                                                    dbc.Input()
-                                                ]),
-                                                dbc.Col(
-                                                    dbc.Button('GO',
-                                                               id='scan-go',
-                                                               color="success",
-                                                               style={'width': '100%'}),
-                                                    align="end"
-                                                ),
-                                                dbc.Col(
-                                                    dbc.Button('ABORT',
-                                                               id='scan-abort',
-                                                               color="danger",
-                                                               style={'width': '100%'}),
-                                                    align="end"
-                                                )
-                                           ])
-                                          ]))
-                    ]
-                )
+                    dbc.CardBody([
+                        dbc.Row([
+                            dbc.Col(dcc.Dropdown(
+                                        id='motor-dropdown',
+                                        options=comp_list_to_options(COMPONENT_LIST.find_comp_type('motor'))
+                                        )
+                                    ),
+                                # [
+                                #         {'label': 'motor1', 'value': 'motor1'},
+                                #         {'label': 'motor2', 'value': 'motor2'},])),
+                            dbc.Col(dbc.Button('Add Motor',
+                                               id='add-motor',
+                                               style={'width': '100%'}),
+                                    width=3),
+                        ]),
+                        dbc.Row(
+                            dbc.Col(
+                                dash_table.DataTable(id='scan-table',
+                                                     columns=[{'name': 'Prefix', 'id': 'prefix'}, 
+                                                              {'name': 'Name', 'id': 'name'}, 
+                                                              {'name': 'ID', 'id': 'id'},
+                                                              {'name': 'Minimum', 'id': 'minimum', 'editable': True}, 
+                                                              {'name': 'Step', 'id': 'step', 'editable': True},
+                                                              {'name': 'Maximum', 'id': 'maximum', 'editable': True}],
+                                                     hidden_columns=['id'],
+                                                     row_selectable='single',
+                                                     data=[],
+                                                     row_deletable=True,
+                                                     css=[{"selector": ".show-hide", "rule": "display: none"}]
+                                                    )
+                            ), style={'margin-bottom':'1rem', 'margin-top':'1rem'},
+                        ),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.InputGroup([
+                                    dbc.InputGroupText('Minimum:'),
+                                    dbc.Input(id='scan-min',
+                                              type='number')
+                                ], className="mb-3")
+                            ]),
+                            dbc.Col([
+                                dbc.InputGroup([
+                                    dbc.InputGroupText('Step:'),
+                                    dbc.Input(id='scan-step',
+                                              type='number')
+                                ], className="mb-3")
+                            ]),
+                            dbc.Col([
+                                dbc.InputGroup([
+                                    dbc.InputGroupText('Maximum:'),
+                                    dbc.Input(id='scan-max',
+                                              type='number')
+                                ], className="mb-3")
+                            ]),
+                            dbc.Col(
+                                dbc.Button('Modify Selected Row',
+                                           id='scan-modify-row',
+                                           style={'width': '100%'})
+                            )
+                        ]),
+                        dbc.Row([
+                            dbc.Col(
+                                dbc.Button('GO',
+                                            id='scan-go',
+                                            color="success",
+                                            style={'width': '100%'}),
+                            ),
+                            dbc.Col(
+                                dbc.Button('ABORT',
+                                            id='scan-abort',
+                                            color="danger",
+                                            style={'width': '100%'}),
+                            )
+                        ])
+
+                    ]),
+                ]
+             ),
+            #  dbc.Card(
+            #     children=[
+            #         dbc.CardHeader("Scan"),
+            #         dbc.CardBody(html.Div(id='bl-scan',
+            #                               children=[
+            #                                 dbc.Row(
+            #                                     html.Img()
+            #                                 ),
+            #                                 dbc.Row([
+            #                                     dbc.Col([
+            #                                         dbc.Label('Minimum', style={'textAlign': 'center'}),
+            #                                         dbc.Input()
+            #                                     ]),
+            #                                     dbc.Col([
+            #                                         dbc.Label('Step', style={'textAlign': 'center'}),
+            #                                         dbc.Input()
+            #                                     ]),
+            #                                     dbc.Col([
+            #                                         dbc.Label('Maximum', style={'textAlign': 'center'}),
+            #                                         dbc.Input()
+            #                                     ]),
+            #                                     dbc.Col(
+            #                                         dbc.Button('GO',
+            #                                                    id='scan-go',
+            #                                                    color="success",
+            #                                                    style={'width': '100%'}),
+            #                                         align="end"
+            #                                     ),
+            #                                     dbc.Col(
+            #                                         dbc.Button('ABORT',
+            #                                                    id='scan-abort',
+            #                                                    color="danger",
+            #                                                    style={'width': '100%'}),
+            #                                         align="end"
+            #                                     )
+            #                                ])
+            #                               ]))
+            #         ]
+            #     )
             ]
 
 
