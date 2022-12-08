@@ -27,6 +27,7 @@ class BasicComponent(BaseModel):
     type: ComponentType
     name: str = Field(description="epics name")
     prefix: str = Field(description="epics prefix")
+    timeout: Optional[float] = 2.0
     units: str = Field(description="units")
     min: Optional[float] = Field(description="minimum position")
     max: Optional[float] = Field(description="maximum position")
