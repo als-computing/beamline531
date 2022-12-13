@@ -5,9 +5,10 @@ import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from dash.exceptions import PreventUpdate
+import pandas as pd
 
 from app_layout import app, COMPONENT_LIST
-from helper_utils import comp_list_to_options
+from helper_utils import ComponentType, comp_list_to_options
 
 
 @app.callback(
@@ -134,35 +135,39 @@ def turn_on_off(on_off_clicks, current_label):
 
 @app.callback(
     Output('scan-table', 'data'),
-    Output('motor-dropdown', 'options'),
+    Output('comp-dropdown', 'options'),
+     Output('scan-min', 'disabled'),
+     Output('scan-step', 'disabled'),
+     Output('scan-max', 'disabled'),
+     Output('scan-modify-row', 'disabled'),
 
-    Input('add-motor', 'n_clicks'),
+    Input('add-comp', 'n_clicks'),
     Input('scan-modify-row', 'n_clicks'),
     Input('scan-table', 'data_previous'),
+    Input('scan-table', 'selected_rows'),
     
-    State('motor-dropdown', 'value'),
-    State('motor-dropdown', 'options'),
+    State('comp-dropdown', 'value'),
+    State('comp-dropdown', 'options'),
     State('scan-table', 'data'),
-    State('scan-table', 'selected_rows'),
     State('scan-min', 'value'),
     State('scan-step', 'value'),
     State('scan-max', 'value'),
     prevent_initial_call=True
 )
-def manage_scantable(add_motor, modify_row, data_table_prev, motor_id, dropdown_options, 
-                     data_table, selected_rows, scan_min, scan_step, scan_max):
+def manage_scantable(add_comp, modify_row, data_table_prev, selected_rows, comp_id, dropdown_options,
+                     data_table, scan_min, scan_step, scan_max):
     '''
     This callback manages the setup of the scan table
     Args:
-        add_motor:              Add motor button has been clicked
+        add_comp:              Add motor button has been clicked
         modify_row:             Modify row button has been clicked
         data_table_prev:        Previous data in scan table, which is used to detect the deletion
                                 of rows (motors)
-        motor_id:               ID of motor selected from the dropdown options
+        selected_rows:          Indexes of selected rows
+        comp_id:                ID of motor selected from the dropdown options
         dropdown_options:       Current dropdown options, these options will update according to
                                 the entries in the scan table
         data_table:             Data in scan table
-        selected_rows:          Indexes of selected rows
         scan_min:               Minimum value for the selected motor
         scan_step:              Step value for the selected motor
         scan_max:               Maximum value for the selected motor
@@ -171,36 +176,49 @@ def manage_scantable(add_motor, modify_row, data_table_prev, motor_id, dropdown_
         dropdown_options:       Updated dropdown options
     '''
     changed_id = dash.callback_context.triggered[0]['prop_id']
-    # Adds a motor
-    if 'add-motor' in changed_id:
-        motor = COMPONENT_LIST.find_component(motor_id)
-        if motor:
+    disable_all = dash.no_update
+    # Adds a component to scan setup
+    if 'add-comp' in changed_id:
+        component = COMPONENT_LIST.find_component(comp_id)
+        if component:
             data_table.append(
                 {
-                    'prefix': motor.prefix,
-                    'name': motor.name,
-                    'id': motor.id,
-                    'minimum': motor.min,
-                    'step': 1,
-                    'maximum': motor.max
+                    'prefix': component.prefix,
+                    'name': component.name,
+                    'type': component.type,
+                    'id': component.id,
+                    'minimum': component.min,
+                    'step': component.step,
+                    'maximum': component.max
                 }
             )
-        dropdown_options.remove({'label': motor.name, 'value': motor.id})
+        dropdown_options.remove({'label': component.name, 'value': component.id})
+    # Checks if the selected row is a detector. If this is the case, min/step/max/modify is disabled
+    elif 'selected_rows' in changed_id:
+        if len(selected_rows)>0:
+            if data_table[selected_rows[0]]['type'] == 'signal':
+                disable_all = True
+            else:
+                disable_all = False
+        # Updates dropdown options if a row has been deleted
+        if len(data_table) + len(dropdown_options) != len(COMPONENT_LIST.comp_list):
+            if len(data_table)==0:
+                component = COMPONENT_LIST.find_component(data_table_prev[0]['id'])
+            else:
+                pd_table = pd.DataFrame.from_records(data_table)
+                for component in data_table_prev:
+                    if component['id'] not in list(pd_table['id']):
+                        component = COMPONENT_LIST.find_component(component['id'])
+                        break
+            dropdown_options = dropdown_options + comp_list_to_options([component])
+            data_table = dash.no_update
     # Modifies the selected row
     elif 'scan-modify-row' in changed_id:
         if selected_rows:
             data_table[selected_rows[0]]['minimum'] = scan_min
             data_table[selected_rows[0]]['step'] = scan_step
             data_table[selected_rows[0]]['maximum'] = scan_max
-    # Updates dropdown options if a row has been deleted
-    elif len(data_table_prev)>len(data_table):
-        for motor in data_table_prev:
-            if motor['id'] not in data_table:
-                motor = COMPONENT_LIST.find_component(motor['id'])
-                break
-        dropdown_options = dropdown_options + comp_list_to_options([motor])
-        data_table = dash.no_update
-    return data_table, dropdown_options
+    return [data_table, dropdown_options] + [disable_all]*4
 
 
 # @app.callback(

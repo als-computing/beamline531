@@ -19,8 +19,8 @@ version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
 # Manually defining the controls for now
-mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('motor'), id="mono", min=0, max=100, units='°')
-longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('motor'), id="long", min=-100, max=100, units='mm')
+mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('motor'), id="mono", min=0, max=100, step=1, units='°')
+longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('motor'), id="long", min=-100, max=100, step=1, units='mm')
 current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('signal'), id="current", units="\u03BCA")
 
 COMPONENT_LIST = BeamlineComponents(comp_list=[mono, longitudinal, current])
@@ -93,29 +93,38 @@ BL_OUTPUT = [dbc.Card(
                     dbc.CardBody([
                         dbc.Row([
                             dbc.Col(dcc.Dropdown(
-                                        id='motor-dropdown',
-                                        options=comp_list_to_options(COMPONENT_LIST.find_comp_type('motor'))
+                                        id='comp-dropdown',
+                                        options=comp_list_to_options(COMPONENT_LIST.comp_list)
                                         )
                                     ),
-                            dbc.Col(dbc.Button('Add Motor',
-                                               id='add-motor',
+                            dbc.Col(dbc.Button('Add To Scan',
+                                               id='add-comp',
                                                style={'width': '100%'}),
                                     width=3),
-                        ]),
+                        ], style={'margin-bottom': '1rem'}),
                         dbc.Row(
                             dbc.Col(
                                 dash_table.DataTable(id='scan-table',
-                                                     columns=[{'name': 'Prefix', 'id': 'prefix'}, 
+                                                     columns=[{'name': 'Type', 'id': 'type'},
+                                                              {'name': 'Prefix', 'id': 'prefix'}, 
                                                               {'name': 'Name', 'id': 'name'}, 
                                                               {'name': 'ID', 'id': 'id'},
-                                                              {'name': 'Minimum', 'id': 'minimum', 'editable': True}, 
-                                                              {'name': 'Step', 'id': 'step', 'editable': True},
-                                                              {'name': 'Maximum', 'id': 'maximum', 'editable': True}],
+                                                              {'name': 'Minimum', 'id': 'minimum'}, 
+                                                              {'name': 'Step', 'id': 'step'},
+                                                              {'name': 'Maximum', 'id': 'maximum'}],
                                                      hidden_columns=['id'],
                                                      row_selectable='single',
                                                      data=[],
                                                      row_deletable=True,
-                                                     css=[{"selector": ".show-hide", "rule": "display: none"}]
+                                                     css=[{"selector": ".show-hide", "rule": "display: none"}],
+                                                     style_data_conditional=[
+                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = motor'},
+                                                        'backgroundColor': 'green',
+                                                        'color': 'white'},
+                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = signal'},
+                                                        'backgroundColor': 'blue',
+                                                        'color': 'white'}
+                                                        ]
                                                     )
                             ), style={'margin-bottom':'1rem', 'margin-top':'1rem'},
                         ),

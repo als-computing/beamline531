@@ -31,6 +31,7 @@ class BasicComponent(BaseModel):
     units: str = Field(description="units")
     min: Optional[float] = Field(description="minimum position")
     max: Optional[float] = Field(description="maximum position")
+    step: Optional[float] = Field(description="step size")
     gui_comp: Optional[List] = []                   # GUI component
     comp: Optional[Any] = None                      # ophyd object
     status: str = 'Online'
