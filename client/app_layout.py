@@ -19,8 +19,8 @@ version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
 # Manually defining the controls for now
-mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('motor'), id="mono", min=0, max=100, step=1, units='°')
-longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('motor'), id="long", min=-100, max=100, step=1, units='mm')
+mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('motor'), id="mono", min=0, max=100, step=1, units='°', settle_time=2.0)
+longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('motor'), id="long", min=-100, max=100, step=1, units='mm', settle_time=2.0)
 current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('signal'), id="current", units="\u03BCA")
 
 COMPONENT_LIST = BeamlineComponents(comp_list=[mono, longitudinal, current])
@@ -92,15 +92,33 @@ BL_OUTPUT = [dbc.Card(
                     dbc.CardHeader("Scan"),
                     dbc.CardBody([
                         dbc.Row([
-                            dbc.Col(dcc.Dropdown(
-                                        id='comp-dropdown',
-                                        options=comp_list_to_options(COMPONENT_LIST.comp_list)
-                                        )
-                                    ),
-                            dbc.Col(dbc.Button('Add To Scan',
-                                               id='add-comp',
-                                               style={'width': '100%'}),
-                                    width=3),
+                            dbc.Col(dcc.Graph(id='scan-img',
+                                              style={'height':'24rem', "width": "100%", "display": "inline-block" }), width=6),
+                            dbc.Col(dash_table.DataTable(id='scan-output',
+                                                         style_cell={'maxWidth': 0,
+                                                                     'overflow': 'hidden',
+                                                                     'textOverflow': 'ellipsis'}, 
+                                                         style_table={'height':'24rem', 'overflowY': 'auto'},
+                                                         css=[{"selector": ".show-hide", "rule": "display: none"}],  
+                                                         fixed_rows={'headers': False},
+                                                         tooltip_duration=None), 
+                                    width=6)
+                        ]),
+                        dbc.Row([
+                            dbc.Col([
+                                dbc.Label('Axis to scan:'),
+                                dcc.Dropdown(
+                                    id='motor-dropdown',
+                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('motor'))
+                                    )]
+                                ),
+                            dbc.Col([
+                                dbc.Label('Axis to move:'),
+                                dcc.Dropdown(
+                                    id='signal-dropdown',
+                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('signal'))
+                                    )]
+                                ),
                         ], style={'margin-bottom': '1rem'}),
                         dbc.Row(
                             dbc.Col(
@@ -109,9 +127,9 @@ BL_OUTPUT = [dbc.Card(
                                                               {'name': 'Prefix', 'id': 'prefix'}, 
                                                               {'name': 'Name', 'id': 'name'}, 
                                                               {'name': 'ID', 'id': 'id'},
-                                                              {'name': 'Minimum', 'id': 'minimum'}, 
+                                                              {'name': 'Start', 'id': 'start'}, 
                                                               {'name': 'Step', 'id': 'step'},
-                                                              {'name': 'Maximum', 'id': 'maximum'}],
+                                                              {'name': 'Stop', 'id': 'stop'}],
                                                      hidden_columns=['id'],
                                                      row_selectable='single',
                                                      data=[],
@@ -131,8 +149,8 @@ BL_OUTPUT = [dbc.Card(
                         dbc.Row([
                             dbc.Col([
                                 dbc.InputGroup([
-                                    dbc.InputGroupText('Minimum:'),
-                                    dbc.Input(id='scan-min',
+                                    dbc.InputGroupText('Start:'),
+                                    dbc.Input(id='scan-start',
                                               type='number')
                                 ], className="mb-3")
                             ]),
@@ -145,8 +163,8 @@ BL_OUTPUT = [dbc.Card(
                             ]),
                             dbc.Col([
                                 dbc.InputGroup([
-                                    dbc.InputGroupText('Maximum:'),
-                                    dbc.Input(id='scan-max',
+                                    dbc.InputGroupText('Stop:'),
+                                    dbc.Input(id='scan-stop',
                                               type='number')
                                 ], className="mb-3")
                             ]),
@@ -186,7 +204,8 @@ app.layout = html.Div(
                     dbc.Col(BL_INPUT, width=4),
                     dbc.Col(BL_OUTPUT, width=8),
                 ]),
-                dcc.Interval(id='refresh-interval')],   # time interval to refresh the app, default 1000 milliseconds
+                dcc.Interval(id='refresh-interval'),    # time interval to refresh the app, default 1000 milliseconds
+                dcc.Store(id='scan-cache', data=None)],   
                 fluid=True
                 ),
     ]

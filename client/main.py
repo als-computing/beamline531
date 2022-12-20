@@ -5,11 +5,13 @@ import dash
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from dash.exceptions import PreventUpdate
-import pandas as pd
 
 from app_layout import app, COMPONENT_LIST
-from helper_utils import ComponentType, comp_list_to_options
-
+from helper_utils import Scan, add2table_remove_from_dropdown, add2dropdown, RE, DB
+import plotly.express as px
+from ophyd.sim import det1, det2, motor
+from bluesky.plans import scan
+import asyncio
 
 @app.callback(
     Output({'base': MATCH, 'type':'target-value'}, 'data'),
@@ -95,6 +97,7 @@ def read_component(refresh_interval, components_ids):
     return response_list
 
 
+
 @app.callback(
     Output({'base': MATCH, 'type': 'on-off'}, 'on'),
     Output({'base': MATCH, 'type': 'on-off'}, 'label'),
@@ -135,27 +138,31 @@ def turn_on_off(on_off_clicks, current_label):
 
 @app.callback(
     Output('scan-table', 'data'),
-    Output('comp-dropdown', 'options'),
-     Output('scan-min', 'disabled'),
-     Output('scan-step', 'disabled'),
-     Output('scan-max', 'disabled'),
-     Output('scan-modify-row', 'disabled'),
+    Output('motor-dropdown', 'options'),
+    Output('signal-dropdown', 'options'),
+    Output('motor-dropdown', 'value'),
+    Output('signal-dropdown', 'value'),
+    Output('scan-start', 'disabled'),
+    Output('scan-step', 'disabled'),
+    Output('scan-stop', 'disabled'),
+    Output('scan-modify-row', 'disabled'),
 
-    Input('add-comp', 'n_clicks'),
+    Input('motor-dropdown', 'value'),
+    Input('signal-dropdown', 'value'),
     Input('scan-modify-row', 'n_clicks'),
     Input('scan-table', 'data_previous'),
     Input('scan-table', 'selected_rows'),
-    
-    State('comp-dropdown', 'value'),
-    State('comp-dropdown', 'options'),
+
+    State('motor-dropdown', 'options'),
+    State('signal-dropdown', 'options'),
     State('scan-table', 'data'),
-    State('scan-min', 'value'),
+    State('scan-start', 'value'),
     State('scan-step', 'value'),
-    State('scan-max', 'value'),
+    State('scan-stop', 'value'),
     prevent_initial_call=True
 )
-def manage_scantable(add_comp, modify_row, data_table_prev, selected_rows, comp_id, dropdown_options,
-                     data_table, scan_min, scan_step, scan_max):
+def manage_scan_table(motor_id, signal_id, modify_row, data_table_prev, selected_rows, motor_options, 
+                      signal_options, data_table, scan_start, scan_step, scan_stop):
     '''
     This callback manages the setup of the scan table
     Args:
@@ -168,9 +175,9 @@ def manage_scantable(add_comp, modify_row, data_table_prev, selected_rows, comp_
         dropdown_options:       Current dropdown options, these options will update according to
                                 the entries in the scan table
         data_table:             Data in scan table
-        scan_min:               Minimum value for the selected motor
+        scan_start:             Start value for the selected motor
         scan_step:              Step value for the selected motor
-        scan_max:               Maximum value for the selected motor
+        scan_stop:              Stop value for the selected motor
     Returns:
         data_table:             Updated data in scan table
         dropdown_options:       Updated dropdown options
@@ -178,22 +185,13 @@ def manage_scantable(add_comp, modify_row, data_table_prev, selected_rows, comp_
     changed_id = dash.callback_context.triggered[0]['prop_id']
     disable_all = dash.no_update
     # Adds a component to scan setup
-    if 'add-comp' in changed_id:
-        component = COMPONENT_LIST.find_component(comp_id)
-        if component:
-            data_table.append(
-                {
-                    'prefix': component.prefix,
-                    'name': component.name,
-                    'type': component.type,
-                    'id': component.id,
-                    'minimum': component.min,
-                    'step': component.step,
-                    'maximum': component.max
-                }
-            )
-        dropdown_options.remove({'label': component.name, 'value': component.id})
+    if 'motor-dropdown' in changed_id:
+        data_table, motor_options = add2table_remove_from_dropdown(COMPONENT_LIST, motor_options, data_table, motor_id)
+    elif 'signal-dropdown' in changed_id:
+        data_table, signal_options = add2table_remove_from_dropdown(COMPONENT_LIST, signal_options, data_table, signal_id)
     # Checks if the selected row is a detector. If this is the case, min/step/max/modify is disabled
+    elif 'data_previous' in changed_id:
+        motor_options, signal_options = add2dropdown(COMPONENT_LIST, motor_options, signal_options, data_table, data_table_prev)
     elif 'selected_rows' in changed_id:
         if len(selected_rows)>0:
             if data_table[selected_rows[0]]['type'] == 'signal':
@@ -201,46 +199,104 @@ def manage_scantable(add_comp, modify_row, data_table_prev, selected_rows, comp_
             else:
                 disable_all = False
         # Updates dropdown options if a row has been deleted
-        if len(data_table) + len(dropdown_options) != len(COMPONENT_LIST.comp_list):
-            if len(data_table)==0:
-                component = COMPONENT_LIST.find_component(data_table_prev[0]['id'])
-            else:
-                pd_table = pd.DataFrame.from_records(data_table)
-                for component in data_table_prev:
-                    if component['id'] not in list(pd_table['id']):
-                        component = COMPONENT_LIST.find_component(component['id'])
-                        break
-            dropdown_options = dropdown_options + comp_list_to_options([component])
-            data_table = dash.no_update
+        if len(data_table) + len(motor_options) + len(signal_options) != len(COMPONENT_LIST.comp_list):
+            motor_options, signal_options = add2dropdown(COMPONENT_LIST, motor_options, signal_options, data_table, data_table_prev)
     # Modifies the selected row
     elif 'scan-modify-row' in changed_id:
         if selected_rows:
-            data_table[selected_rows[0]]['minimum'] = scan_min
+            data_table[selected_rows[0]]['start'] = scan_start
             data_table[selected_rows[0]]['step'] = scan_step
-            data_table[selected_rows[0]]['maximum'] = scan_max
-    return [data_table, dropdown_options] + [disable_all]*4
+            data_table[selected_rows[0]]['stop'] = scan_stop
+    return [data_table, motor_options, signal_options, None, None] + [disable_all]*4
 
 
-# @app.callback(
-#     Output('scan-output', 'children'),
+@app.callback(
+    Output('scan-cache', 'data'),
 
-#     Input('scan-go', 'n_clicks'),
-#     Input('scan-abort', 'n_clicks')
-# )
-# def start_scan(scan_go, scan_abort):
-#     '''
-#     This callback starts a scan
-#     '''
+    Input('scan-go', 'n_clicks'),
 
-#     from bluesky.plans import count
+    State('scan-table', 'data'),
+    prevent_initial_call=True
+)
+def start_scan(scan_go, scan_table):
+    '''
+    This callback starts a scan
+    Args:
+        scan_go:        Go button to start a scan
+        scan_table:     Scan details in table
+    Return:
+        scan_cache:     Scan cache
+    '''
+    detectors = []
+    motors = []
+    for row in scan_table:
+        if row['type'] == 'signal':
+            detectors.append(COMPONENT_LIST.find_component(row['id']).comp)
+        else:
+            motors = motors + [COMPONENT_LIST.find_component(row['id']).comp, row['start'], row['stop']]
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        RE(Scan(detectors=detectors, motors=motors, step=row['step']))
+    except Exception as e:
+        print('Scan failed due to {e}. Running a simulation as a demo.')
+        try:
+            RE(scan([det1], motor, -1, 1, 100000))
+        except Exception as e:
+            print(f'This is the exception: {e}')
+    return 'scanning'
 
-#     dets = [bl531_current]   # a list of any number of detectors
-#     motors = bl531_mono
 
-#     RE(count(dets))
+@app.callback(
+    Output('scan-img', 'figure'),
+    Output('scan-output', 'columns'),
+    Output('scan-output', 'data'),
 
-#     from bluesky.plans import scan
-#     RE(scan(dets, motors, 20, 21, 11))
+    Input('scan-go', 'n_clicks'),
+    Input('scan-abort', 'n_clicks'),
+    Input('refresh-interval', 'n_intervals'),
+
+    State('scan-cache', 'data'),
+    prevent_initial_call=True
+)
+def manage_running_scan(scan_go, scan_abort, n_int, status):
+    '''
+    This callback starts a scan
+    Args:
+        scan_abort:     Abort button to stop a scan
+        scan_cache:     Scan object
+    Return:
+        scan_output:    Scan output
+    '''
+    changed_id = dash.callback_context.triggered[0]['prop_id']
+    results = dash.no_update
+    columns = dash.no_update
+    fig = dash.no_update
+    if 'scan-abort' in changed_id:
+        RE.abort()
+    else:
+        try:
+            results = DB[-1].table()
+            x = None
+            y = None
+            for col in list(results.columns):
+                comp = COMPONENT_LIST.find_component(name=col)
+                if comp:
+                    if comp.type == 'motor':
+                        y = col
+                    else:
+                        x = col
+                else:
+                    x='motor'
+                    y='det1'
+            columns = [{'name': column, 'id': column} for column in list(results.columns)]
+            if x and y:
+                fig = px.line(results, x=x, y=y)
+                fig.update_layout( margin=dict(l=20, r=20, t=20, b=20))
+            results = results.to_dict('records')
+        except Exception as e:
+            print(e)
+    return fig, columns, results
 
 
 if __name__ == '__main__':
