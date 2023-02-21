@@ -3,18 +3,18 @@ import uuid
 from typing import Iterator, List, Tuple
 from uuid import uuid4
 
-from model import Beamline, FullBeamline, Control
+from model import Beamline, ClientBeamline, BasicComponent
 
 
 class BeamlineNotFound(Exception):
     pass
 
 
-class ControlNotFound(Exception):
+class ComponentNotFound(Exception):
     pass
 
 
-class ControlService():
+class ComponentService():
     """
     """
 
@@ -22,48 +22,50 @@ class ControlService():
         """
         """
         if db_name is None:
-            db_name = 'control'
+            db_name = 'beamline_components'
         self._db = client[db_name]
         self._collection_beamline = self._db.beamline
         self._collection_beamline_revision = self._db.beamline_revision
-        self._collection_control = self._db.control
-        self._collection_control_revision = self._db.control_revision
+        self._collection_component = self._db.component
         self._create_indexes()
 
-    def create_control(self, control: Control) -> str:
-        control.uid = str(uuid4())
-        self._collection_control.insert_one(control.dict())
-        return control.uid
+    def create_components(self, components: List[BasicComponent]) -> List[str]:
+        component_uids = []
+        for component in components:
+            component.uid = str(uuid4())
+            self._collection_component.insert_one(component.dict())
+            component_uids.append(component.uid)
+        return component_uids
     
     def create_beamline(self, beamline: Beamline) -> str:
         beamline.uid = str(uuid4())
         self._collection_beamline.insert_one(beamline.dict())
         return beamline.uid
     
-    def get_control(self, uid: str) -> Control:
-        item = self._collection_control.find_one({'uid': uid})
+    def get_component(self, uid: str) -> BasicComponent:
+        item = self._collection_component.find_one({'uid': uid})
         if not item:
-            raise ControlNotFound(f'no control with id: {uid}')
+            raise ComponentNotFound(f'no component with id: {uid}')
         self._clean_id(item)
-        control = Control.parse_obj(item)
-        return control
+        component = BasicComponent.parse_obj(item)
+        return component
     
-    def get_beamline(self, uid: str) -> FullBeamline:
+    def get_beamline(self, uid: str) -> ClientBeamline:
         item = self._collection_beamline.find_one({'uid': uid})
         if not item:
             raise BeamlineNotFound(f'no beamline with id: {uid}')
         self._clean_id(item)
         beamline = Beamline.parse_obj(item)
-        controls = []
-        for control_uid in beamline.controls_uids:
-            controls.append(self.get_control(control_uid))
-        full_beamline = FullBeamline.parse_obj(beamline)
-        full_beamline.controls = controls
-        return full_beamline
+        components = []
+        for component_uid in beamline.components_uids:
+            components.append(self.get_component(component_uid))
+        client_beamline = ClientBeamline.parse_obj(beamline)
+        client_beamline.Components = components
+        return client_beamline
     
     def _create_indexes(self):
         self._collection_beamline.create_index([('uid', 1)], unique=True)
-        self._collection_control.create_index([('uid', 1)], unique=True)
+        self._collection_component.create_index([('uid', 1)], unique=True)
     
     @staticmethod
     def _clean_id(data):
@@ -76,7 +78,7 @@ class ControlService():
 
 class Context:
     db: MongoClient = None
-    control_svc: ControlService = None
+    component_svc: ComponentService = None
 
 
 context = Context
