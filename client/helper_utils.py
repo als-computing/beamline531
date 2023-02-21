@@ -22,8 +22,8 @@ RE.subscribe(DB.insert)             # Insert all metadata/data captured into db
 ###################################################### CLASSES ######################################################
 
 class ComponentType(str, Enum):
-    motor = "motor"
-    signal = "signal"
+    control = "control"
+    detector = "detector"
 
 
 class BasicComponent(BaseModel):
@@ -58,8 +58,8 @@ class BasicComponent(BaseModel):
                                              style={'display': 'inline-block', 'margin-top': '0rem', 
                                                     'margin-bottom': '0rem'}),
                              style={'textAlign': 'right'})
-                    ], 
-                    no_gutters=True, justify='center', align='center'
+                    ],  
+                    justify='center', align='center'
                  )
         return header
     
@@ -84,9 +84,9 @@ class BasicComponent(BaseModel):
                                 ])
                         ]
     
-    def create_motor_gui(self, current_position):
+    def create_control_gui(self, current_position):
         '''
-        Creates the GUI components for motor
+        Creates the GUI components for control
         '''
         status_value = self.status == 'Online'
         header = self.create_header()
@@ -120,7 +120,6 @@ class BasicComponent(BaseModel):
                                                                    id={'base': self.id, 'type': 'target-go'}, 
                                                                    disabled=not(status_value),
                                                                    style={'width': '90%', 'fontSize': '11px'}))],
-                                                    no_gutters=True
                                                 ), 
                                             ]),
                                             # Relative move controls
@@ -146,8 +145,7 @@ class BasicComponent(BaseModel):
                                                                    className="fa fa-chevron-right", 
                                                                    style={'width': '90%', 'margin-left': '0rem'}, 
                                                                    disabled=not(status_value))
-                                                    )], 
-                                                    no_gutters=True
+                                                    )]
                                                 ),
                                                 # Cache variable to keep track of the target value when a new
                                                 # movement is requested before the previous one has completed
@@ -165,7 +163,7 @@ class BasicComponent(BaseModel):
         '''
         try:
             # Connecting to the component
-            if self.type == 'motor':
+            if self.type == 'control':
                 if self.settle_time:
                     self.comp = EpicsMotor(self.prefix, name=self.name, settle_time=self.settle_time)
                 else:
@@ -180,8 +178,8 @@ class BasicComponent(BaseModel):
             self.status = 'Offline'
             current_reading = 0                # current position goes to 0
             logging.error(f'Component {self.prefix} not found due to: {e}')
-        if self.type == 'motor':
-            self.create_motor_gui(current_reading)
+        if self.type == 'control':
+            self.create_control_gui(current_reading)
         else:
             self.create_sensor_gui(current_reading)
     
@@ -197,12 +195,12 @@ class BasicComponent(BaseModel):
     
     def move(self, target_position):
         '''
-        Moves the motor to the target position.
+        Moves the control to the target position.
         '''
         try:
             self.comp.move(target_position, wait=False)
         except Exception as e:
-            logging.error(f'Motor {self.prefix} could not move due to: {e}')
+            logging.error(f'Control {self.prefix} could not move due to: {e}')
 
 
 class BeamlineComponents(BaseModel):
@@ -249,12 +247,12 @@ class BeamlineComponents(BaseModel):
 class Scan(BaseModel):
     broker_uid: Optional[str]
     detectors: List
-    motors: List
+    controls: List
     step: int
 
     def start(self):
         try:
-            RE(scan(self.detectors, *self.motors, num=self.step))
+            RE(scan(self.detectors, *self.controls, num=self.step))
         except Exception as e:
             logging.error(f'Error while processing scan: {e}')
         return 
@@ -296,7 +294,7 @@ def add2table_remove_from_dropdown(component_list, dropdown_options, data_table,
     Adds new component to scan table and removes this component from it's corresponding dropdown
     Args:
         component_list:     List of components at beamline
-        dropdown_options:   Dropdown options for signals/motors
+        dropdown_options:   Dropdown options for detectors/controls
         data_table:         Details within scan table
         comp_id:            Component ID to add to scan table
     Returns:
@@ -323,7 +321,7 @@ def add2table_remove_from_dropdown(component_list, dropdown_options, data_table,
 
 
 
-def add2dropdown(component_list, motor_options, signal_options, data_table, data_table_prev):
+def add2dropdown(component_list, control_options, detector_options, data_table, data_table_prev):
     '''
     
     '''
@@ -335,9 +333,9 @@ def add2dropdown(component_list, motor_options, signal_options, data_table, data
             if component['id'] not in list(pd_table['id']):
                 component = component_list.find_component(component['id'])
                 break
-    if component.type == ComponentType('motor'):
-        motor_options = motor_options + comp_list_to_options([component])
+    if component.type == ComponentType('control'):
+        control_options = control_options + comp_list_to_options([component])
     else:
-        signal_options = signal_options + comp_list_to_options([component])
-    return motor_options, signal_options
+        detector_options = detector_options + comp_list_to_options([component])
+    return control_options, detector_options
 

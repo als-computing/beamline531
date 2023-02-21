@@ -19,9 +19,9 @@ version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
 # Manually defining the controls for now
-mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('motor'), id="mono", min=0, max=100, step=1, units='°', settle_time=2.0)
-longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('motor'), id="long", min=-100, max=100, step=1, units='mm', settle_time=2.0)
-current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('signal'), id="current", units="\u03BCA")
+mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('control'), id="mono", min=0, max=100, step=1, units='°', settle_time=2.0)
+longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('control'), id="long", min=-100, max=100, step=1, units='mm', settle_time=2.0)
+current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('detector'), id="current", units="\u03BCA")
 
 COMPONENT_LIST = BeamlineComponents(comp_list=[mono, longitudinal, current])
 COMPONENT_GUI = COMPONENT_LIST.get_gui()
@@ -106,17 +106,17 @@ BL_OUTPUT = [dbc.Card(
                         ]),
                         dbc.Row([
                             dbc.Col([
-                                dbc.Label('Axis to scan:'),
+                                dbc.Label('Axis to move:'),
                                 dcc.Dropdown(
-                                    id='motor-dropdown',
-                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('motor'))
+                                    id='control-dropdown',
+                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('control'))
                                     )]
                                 ),
                             dbc.Col([
-                                dbc.Label('Axis to move:'),
+                                dbc.Label('Axis to scan:'),
                                 dcc.Dropdown(
-                                    id='signal-dropdown',
-                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('signal'))
+                                    id='detector-dropdown',
+                                    options=comp_list_to_options(COMPONENT_LIST.find_comp_type('detector'))
                                     )]
                                 ),
                         ], style={'margin-bottom': '1rem'}),
@@ -136,10 +136,10 @@ BL_OUTPUT = [dbc.Card(
                                                      row_deletable=True,
                                                      css=[{"selector": ".show-hide", "rule": "display: none"}],
                                                      style_data_conditional=[
-                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = motor'},
+                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = control'},
                                                         'backgroundColor': 'green',
                                                         'color': 'white'},
-                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = signal'},
+                                                        {'if': {'column_id': 'type', 'filter_query': '{type} = detector'},
                                                         'backgroundColor': 'blue',
                                                         'color': 'white'}
                                                         ]

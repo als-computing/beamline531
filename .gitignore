@@ -1,5 +1,8 @@
 # Project
-env_bl531
+env_bl
+
+# MacOS
+**.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
