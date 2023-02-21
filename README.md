@@ -18,4 +18,4 @@ To start the frontend service, execute:
 $ python client/main.py
 ```
 
-The frontend interface can be accessed at: http://localhost:8022/
+The frontend interface can be accessed at: http://localhost:8052/
