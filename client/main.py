@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State, MATCH, ALL
 from dash.exceptions import PreventUpdate
 
 from app_layout import app, COMPONENT_LIST
-from helper_utils import Scan, add2table_remove_from_dropdown, add2dropdown, RE, DB
+from helper_utils import Scan, ComponentType, add2table_remove_from_dropdown, add2dropdown, RE, DB
 import plotly.express as px
 from ophyd.sim import det1, det2, motor
 from bluesky.plans import scan
@@ -238,7 +238,8 @@ def start_scan(scan_go, scan_table):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        RE(Scan(detectors, *controls, step=row['step']))
+        scans = Scan(detectors=detectors, controls=controls, step=row['step'])
+        scans.start()
     except Exception as e:
         print(f'Scan failed due to {e}. Running a simulation as a demo.')
         try:
@@ -280,23 +281,22 @@ def manage_running_scan(scan_go, scan_abort, n_int, status):
             results = DB[-1].table()
             x = None
             y = None
+            valid_column = []
             for col in list(results.columns):
                 comp = COMPONENT_LIST.find_component(name=col)
                 if comp:
-                    if comp.type == 'control':
-                        y = col
-                    else:
+                    valid_column.append(col)
+                    if comp.type == ComponentType('control'):
                         x = col
-                else:
-                    x='control'
-                    y='det1'
-            columns = [{'name': column, 'id': column} for column in list(results.columns)]
+                    elif comp.type == ComponentType('detector'):
+                        y = col
+            columns = [{'name': column, 'id': column} for column in list(valid_columns)]
             if x and y:
                 fig = px.line(results, x=x, y=y)
                 fig.update_layout( margin=dict(l=20, r=20, t=20, b=20))
             results = results.to_dict('records')
         except Exception as e:
-            print(e)
+            print(f'plot failed due to: {e}')
     return fig, columns, results
 
 
