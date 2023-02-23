@@ -281,11 +281,11 @@ def manage_running_scan(scan_go, scan_abort, n_int, status):
             results = DB[-1].table()
             x = None
             y = None
-            valid_column = []
+            valid_columns = []
             for col in list(results.columns):
                 comp = COMPONENT_LIST.find_component(name=col)
                 if comp:
-                    valid_column.append(col)
+                    valid_columns.append(col)
                     if comp.type == ComponentType('control'):
                         x = col
                     elif comp.type == ComponentType('detector'):
