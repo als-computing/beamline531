@@ -238,9 +238,9 @@ def start_scan(scan_go, scan_table):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        RE(Scan(detectors=detectors, motors=controls, step=row['step']))
+        RE(Scan(detectors, *controls, step=row['step']))
     except Exception as e:
-        print('Scan failed due to {e}. Running a simulation as a demo.')
+        print(f'Scan failed due to {e}. Running a simulation as a demo.')
         try:
             RE(scan([det1], control, -1, 1, 100000))
         except Exception as e:
