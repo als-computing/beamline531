@@ -128,7 +128,6 @@ BL_OUTPUT = [dbc.Card(
                                                               {'name': 'Name', 'id': 'name'}, 
                                                               {'name': 'ID', 'id': 'id'},
                                                               {'name': 'Start', 'id': 'start'}, 
-                                                              {'name': 'Step', 'id': 'step'},
                                                               {'name': 'Stop', 'id': 'stop'}],
                                                      hidden_columns=['id'],
                                                      row_selectable='single',
@@ -156,13 +155,6 @@ BL_OUTPUT = [dbc.Card(
                             ]),
                             dbc.Col([
                                 dbc.InputGroup([
-                                    dbc.InputGroupText('Step:'),
-                                    dbc.Input(id='scan-step',
-                                              type='number')
-                                ], className="mb-3")
-                            ]),
-                            dbc.Col([
-                                dbc.InputGroup([
                                     dbc.InputGroupText('Stop:'),
                                     dbc.Input(id='scan-stop',
                                               type='number')
@@ -175,6 +167,13 @@ BL_OUTPUT = [dbc.Card(
                             )
                         ]),
                         dbc.Row([
+                            dbc.Col([
+                                dbc.InputGroup([
+                                    dbc.InputGroupText('Number of points:'),
+                                    dbc.Input(id='scan-number',
+                                              type='number')
+                                ], className="mb-3")
+                            ]),
                             dbc.Col(
                                 dbc.Button('ABORT',
                                             id='scan-abort',

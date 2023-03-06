@@ -311,7 +311,6 @@ def add2table_remove_from_dropdown(component_list, dropdown_options, data_table,
                 'type': component.type,
                 'id': component.id,
                 'start': component.min,
-                'step': component.step,
                 'stop': component.max
             }
         )

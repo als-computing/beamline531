@@ -144,7 +144,6 @@ def turn_on_off(on_off_clicks, current_label):
     Output('control-dropdown', 'value'),
     Output('detector-dropdown', 'value'),
     Output('scan-start', 'disabled'),
-    Output('scan-step', 'disabled'),
     Output('scan-stop', 'disabled'),
     Output('scan-modify-row', 'disabled'),
 
@@ -158,12 +157,11 @@ def turn_on_off(on_off_clicks, current_label):
     State('detector-dropdown', 'options'),
     State('scan-table', 'data'),
     State('scan-start', 'value'),
-    State('scan-step', 'value'),
     State('scan-stop', 'value'),
     prevent_initial_call=True
 )
 def manage_scan_table(control_id, detector_id, modify_row, data_table_prev, selected_rows, control_options, 
-                      detector_options, data_table, scan_start, scan_step, scan_stop):
+                      detector_options, data_table, scan_start, scan_stop):
     '''
     This callback manages the setup of the scan table
     Args:
@@ -206,9 +204,8 @@ def manage_scan_table(control_id, detector_id, modify_row, data_table_prev, sele
     elif 'scan-modify-row' in changed_id:
         if selected_rows:
             data_table[selected_rows[0]]['start'] = scan_start
-            data_table[selected_rows[0]]['step'] = scan_step
             data_table[selected_rows[0]]['stop'] = scan_stop
-    return [data_table, control_options, detector_options, None, None] + [disable_all]*4
+    return [data_table, control_options, detector_options, None, None] + [disable_all]*3
 
 
 @app.callback(
@@ -217,14 +214,16 @@ def manage_scan_table(control_id, detector_id, modify_row, data_table_prev, sele
     Input('scan-go', 'n_clicks'),
 
     State('scan-table', 'data'),
+    State('scan-number', 'value'),
     prevent_initial_call=True
 )
-def start_scan(scan_go, scan_table):
+def start_scan(scan_go, scan_table, scan_number):
     '''
     This callback starts a scan
     Args:
         scan_go:        Go button to start a scan
         scan_table:     Scan details in table
+        scan_number:    Number of points in the scan
     Return:
         scan_cache:     Scan cache
     '''
@@ -238,7 +237,7 @@ def start_scan(scan_go, scan_table):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        scans = Scan(detectors=detectors, controls=controls, step=row['step'])
+        scans = Scan(detectors=detectors, controls=controls, step=scan_number)
         scans.start()
     except Exception as e:
         print(f'Scan failed due to {e}. Running a simulation as a demo.')
