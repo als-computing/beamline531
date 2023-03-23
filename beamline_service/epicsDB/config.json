@@ -1,0 +1,7 @@
+{
+    "CLIENT_ADDRESS":"bl531epics.q2jhcy5.mongodb.net/?retryWrites=true&w=majority",
+    "USERNAME":"bl531",
+    "PWD":"bl531",
+    "DB":"epicsHappi_mod",
+    "COLLECTION":"epicsPVs"
+}
