@@ -1,16 +1,18 @@
 import sys, json
-from epicsdb import getClientPath, getCollection, create_dbApp
+import sys
+sys.path.append('/home/bl531/bl531_gui/beamline531_gyl')
+
+from beamline_service.epicsDB.epicsdb_utils import *
 
 # Get configuration setting from a config file
 assert (len(sys.argv) == 2), "Missing mongoDB config.json as the input argument"
 
 # load config.json file
-with open(sys.argv[1], 'r') as d:
-    inputs = json.load(d)
+dbConfigs = getConfigs(sys.argv[1])
 
 # initiate MongoDB client and get db collection
-clientpath = getClientPath(input_dic=inputs)
-collection = getCollection(clientpath, inputs['DB'], inputs['COLLECTION'])
+clientpath = getClientPath(input_dic=dbConfigs)
+collection = getCollection(clientpath, dbConfigs['db'], dbConfigs['collection'])
 
 # create dash app and launch
 app = create_dbApp(collection)
