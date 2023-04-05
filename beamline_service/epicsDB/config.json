@@ -1,0 +1,7 @@
+{
+    "host":"bl531epics.q2jhcy5.mongodb.net/?retryWrites=true&w=majority",
+    "user":"bl531",
+    "pw":"bl531",
+    "db":"epicsHappi_mod",
+    "collection":"epicsPVs"
+}

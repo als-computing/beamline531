@@ -4,6 +4,11 @@ import dash_bootstrap_components as dbc
 from helper_utils import BasicComponent, ComponentType, BeamlineComponents
 from helper_utils import comp_list_to_options
 
+import sys
+sys.path.append('/home/bl531/bl531_gui/beamline531_gyl')
+
+from beamline_service.epicsDB.epicsdb_utils import getListOphydDashItems
+
 
 #### SETUP DASH APP ####
 external_stylesheets = [dbc.themes.BOOTSTRAP, "../assets/style.css", 
@@ -18,14 +23,10 @@ beamline = 'als_5_3_1'
 version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
-# Manually defining the controls for now
-mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('control'), id="mono", min=0, max=100, step=1, units='°', settle_time=2.0)
-longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('control'), id="long", min=-100, max=100, step=1, units='mm', settle_time=2.0)
-current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('detector'), id="current", units="\u03BCA")
-
-COMPONENT_LIST = BeamlineComponents(comp_list=[mono, longitudinal, current])
+# Get beamline PVs from MongoDB as OphydDash object
+l = getListOphydDashItems(mongoConfig_path = '/home/bl531/bl531_gui/beamline531_gyl/beamline_service/epicsDB/config.json')
+COMPONENT_LIST = BeamlineComponents(l)
 COMPONENT_GUI = COMPONENT_LIST.get_gui()
-
 
 ### BEGIN DASH CODE ###
 # APP HEADER
@@ -79,6 +80,15 @@ HEADER = dbc.Navbar(
 BL_INPUT = html.Div(id='bl-controls',
                     children=COMPONENT_GUI)
 
+# STATUS OUTPUT
+BL_STATUS = html.Div([
+    dcc.Textarea(
+        placeholder='Status:',
+        id='status_txt',
+        value='Status:',
+        style={'width': '100%'}
+    )
+])
 
 # BEAMLINE OUTPUTS (SCANS, CAMERAS, ETC)
 BL_OUTPUT = [dbc.Card(
@@ -186,12 +196,14 @@ BL_OUTPUT = [dbc.Card(
                                             color="success",
                                             style={'width': '100%'}),
                             ),
-                        ])
+                        ]),
+                        dbc.Row([BL_STATUS])
 
                     ]),
                 ]
              )
             ]
+
 
 
 ##### DEFINE LAYOUT #####
