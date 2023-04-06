@@ -1,9 +1,10 @@
-import logging
+import logging, os
 from typing import List, Optional
 
 from fastapi import FastAPI, Query as FastQuery, HTTPException
 from pydantic import BaseModel
 from starlette.config import Config
+import uvicorn
 
 from model import ClientBeamline, Beamline, BasicComponent
 from component_service import ComponentService, Context
@@ -11,7 +12,8 @@ from component_service import ComponentService, Context
 logger = logging.getLogger('component_api')
 
 DEFAULT_PAGE_SIZE = 20
-
+MONGO_DB_USERNAME = str(os.environ['MONGO_INITDB_ROOT_USERNAME'])
+MONGO_DB_PASSWORD = str(os.environ['MONGO_INITDB_ROOT_PASSWORD'])
 
 def init_logging():
     ch = logging.StreamHandler()
@@ -22,7 +24,7 @@ def init_logging():
 
 
 config = Config(".env")
-MONGO_DB_URI = config("MONGO_DB_URI", cast=str, default="mongodb://localhost:27017/component")
+MONGO_DB_URI = "mongodb://%s:%s@mongodb_bl531:27017/?authSource=admin" % (MONGO_DB_USERNAME, MONGO_DB_PASSWORD)
 COMP_DB_NAME = config("COMP_DB_NAME", cast=str, default="component")
 COMP_LOG_LEVEL = config("COMP_LOG_LEVEL", cast=str, default="INFO")
 
@@ -83,4 +85,4 @@ def get_beamline(uid: str) -> ClientBeamline:
 
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8080)
+    uvicorn.run(app, host='0.0.0.0', port=8090)
