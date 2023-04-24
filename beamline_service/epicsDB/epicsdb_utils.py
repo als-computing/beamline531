@@ -111,8 +111,8 @@ def pushData_list(clientPath, dbName, collectionName, pvlist):
     collection = client.get_database(dbName).get_collection(collectionName)
     for v in pvlist:
         try:
-            del v['kwargs']
-            del v['_id']
+            v.pop('_id')
+            v.pop('kwargs')
         except:
             print('No such fields')
 
