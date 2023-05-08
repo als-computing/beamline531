@@ -21,6 +21,7 @@ class OphydDash():
 
         self.ophydObj = None
         self.gui_comp = None
+        self.precision = 5
 
         self.connect()
         self.update_status()
@@ -177,7 +178,7 @@ def create_control_gui(obj:'OphydDash'):
     # status_value = self.status == 'Online'
     obj.update_status()
     header = create_header(obj)
-    current_position = obj.position
+    current_position = np.round(obj.position, obj.precision)
     obj.gui_comp = [dbc.Card(id={'base': obj.id, 'type': 'control'},
                                 children=[
                                 dbc.CardHeader(header),
@@ -196,9 +197,8 @@ def create_control_gui(obj:'OphydDash'):
                                             dbc.Row(
                                                 [dbc.Col(
                                                     dcc.Input(id={'base': obj.id, 'type': 'target-absolute'}, 
-                                                                min=obj.min,
-                                                                max=obj.max,
-                                                                step=1,
+                                                                # min=obj.min,
+                                                                # max=obj.max,
                                                                 value=current_position, 
                                                                 type='number',
                                                                 disabled=not(obj.status),
@@ -221,9 +221,9 @@ def create_control_gui(obj:'OphydDash'):
                                                                 disabled=not(obj.status)),),
                                                 dbc.Col(
                                                     dcc.Input(id={'base': obj.id, 'type': 'target-step'}, 
-                                                                min=obj.min,
-                                                                max=obj.max,
-                                                                step=0.01,
+                                                                # min=obj.min,
+                                                                # max=obj.max,
+                                                                # step=0.01,
                                                                 value=1, 
                                                                 type='number',
                                                                 disabled=not(obj.status),
