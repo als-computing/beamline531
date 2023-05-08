@@ -3,6 +3,7 @@ import requests
 
 import dash
 import dash_bootstrap_components as dbc
+import plotly.express as px
 from dash.dependencies import Input, Output, State, MATCH, ALL
 from dash.exceptions import PreventUpdate
 
@@ -12,7 +13,16 @@ import plotly.express as px
 from ophyd.sim import det1, det2, motor
 from bluesky.plans import scan
 import asyncio
+import pvaccess as pva
+import numpy as np
+from beamline_service.pva.pvaMonitor import pvaMonitor
 
+MAX_SCALER_Length = 1800   # 30 min assuming 1 sec / pt
+
+m = pvaMonitor()
+c = pva.Channel('13SIM1:Pva1:Image')
+c.subscribe('monitor', m.monitor)
+c.startMonitor('')
 
 @app.callback(
     Output({'base': MATCH, 'type':'target-value'}, 'data'),
@@ -57,6 +67,68 @@ def move(target_go=None, target_left=None, target_right=None,
     return msg, None, None, None
     
 
+
+@app.callback(
+    Output('scalerPlot', 'figure'),
+    Output('livescaler-cache', 'data'),
+
+    Input('refresh-interval', 'n_intervals'),
+    Input('livescaler-cache', 'data'),
+    Input('scaler-x', 'value'),
+    Input('scaler-y', 'value'),
+)
+def plotLiveScaler(refresh_interval, data, x_component, y_component):
+    '''
+    This callback reads and plot the selected scaler
+    Args:
+        refresh_interval:   Time interval between updates
+        data:               Data stored in cache
+        x_component:        Selected component to plot on x-axis
+        y_component:        Selected component to plot on y-axis
+        init:               Boolean variable for initializing cache data
+        
+    Output:
+        px.Scatter, updated scattered figure
+        dcc.Store,  update the store in cache
+    '''
+    # print(refresh_interval, data, x_component, y_component)
+    
+    xobj = x_component if x_component =='Time' else COMPONENT_LIST.find_component(x_component)
+    yobj = y_component if y_component =='Time' else COMPONENT_LIST.find_component(y_component)    
+    
+    if (xobj is None) | (yobj is None):
+        return px.scatter(), None
+
+    xval = [refresh_interval if x_component == 'Time' else xobj.position]
+    yval = [refresh_interval if y_component == 'Time' else yobj.position]
+    xunit = 'sec' if x_component == 'Time' else xobj.unit
+    yunit = 'sec' if y_component == 'Time' else yobj.unit
+
+    if data is None:
+        data = {}
+        for l in ['xval','yval','xunit','yunit','x_component', 'y_component']:
+            data.update({l:eval(l)})
+    elif all([x_component==data['x_component'], y_component==data['y_component']]):
+        if len(data['xval']) < MAX_SCALER_Length:
+            xval = data['xval'] + xval 
+            yval = data['yval'] + yval
+        else:
+            xval = data['xval'][1:] + xval
+            yval = data['yval'][1:] + yval
+        data.update({'xval': xval})
+        data.update({'yval': yval})
+    else:
+        data = None
+        print('data initilization')
+        return px.scatter(), None
+    
+    fig = px.scatter(x=data['xval'],y=data['yval'])
+    fig.update_layout(
+    xaxis_title="%s (%s)"%(x_component, data['xunit']),
+    yaxis_title="%s (%s)"%(y_component, data['yunit']))
+
+    return fig, data
+
 @app.callback(
     Output({'base': ALL, 'type': 'current-pos'}, 'children'),
     Input('refresh-interval', 'n_intervals'),
@@ -76,7 +148,7 @@ def update(refresh_interval):
     for c in comp_list: c.update_status()
 
     # Get current position
-    response_list = ['%.2f %s'%(c.position,c.units) for c in comp_list]
+    response_list = ['%.2f %s'%(c.position,c.unit) for c in comp_list]
     
     return response_list
 
@@ -279,6 +351,22 @@ def manage_running_scan(scan_go, scan_abort, n_int, status):
         except Exception as e:
             print(f'plot failed due to: {e}')
     return fig, columns, results
+
+
+
+# # Plot the streamed data
+# @app.callback(
+#     Output('bl-cam', 'figure'),
+#     Input('refresh-interval', 'n_intervals'),
+#     # State('bl-cam-data', 'data')
+# )
+# def plotLive(n):
+#     if m.data is not None:
+#         data = m.data
+#     else:
+#         data = np.zeros((1024,1024))
+#     print('print something')
+#     return px.imshow(data)
 
 
 if __name__ == '__main__':
