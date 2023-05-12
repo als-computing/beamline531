@@ -1,4 +1,4 @@
-version: '3.2'
+version: '3.7'
 
 services:
   beamline_api:
@@ -7,8 +7,8 @@ services:
       dockerfile: 'docker/Dockerfile'
     command: 'python src/main.py'
     environment:
-      MONGO_INITDB_ROOT_USERNAME: '${MONGO_DB_USERNAME}'
-      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_DB_PASSWORD}'
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_INITDB_ROOT_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
     ports:
       - '8090:8090'
     
@@ -18,8 +18,11 @@ services:
     container_name: "mongodb_bl531"
     working_dir: "/database/"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: '${MONGO_DB_USERNAME}'
-      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_DB_PASSWORD}'
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_INITDB_ROOT_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
     volumes:
       - "./database/:/data/db"
   
+networks: 
+  default:
+    name: "bl_service"

@@ -1,68 +1,60 @@
 from fastapi.testclient import TestClient
+from typing import List
 
-from api import API_URL_PREFIX
-
-from model import BasicComponent, ClientBeamline, ComponentType
+from main import API_URL_PREFIX
+from model import Beamline
 
 
 def test_beamline(rest_client: TestClient):
-    response = rest_client.post(API_URL_PREFIX + "/components", json=[component1])
+    response = rest_client.post(f"{API_URL_PREFIX}/beamline", json=beamline1)
     assert response.status_code == 200
-    component1_uid = response.json()['uids'][0]
+    beamline1_uid = response.json()['uid']
 
-    response: BasicComponent = rest_client.get(f"{API_URL_PREFIX}/component/{component1_uid}")
-    assert response.status_code == 200, f"oops {response.text}"
+    response: Beamline = rest_client.get(f"{API_URL_PREFIX}/beamline/{beamline1_uid}")
+    assert response.status_code == 200, f"error: {response.text}"
+    beamline = response.json()
     
     source = response.json()
-    assert source['uid'] == component1_uid
+    assert source['uid'] == beamline1_uid
     
-    response = rest_client.post(f"{API_URL_PREFIX}/components", json=[component2])
+    response: List[Beamline] = rest_client.get(f"{API_URL_PREFIX}/beamlines")
+    assert response.status_code == 200, f"error: {response.text}"
+    beamlines = response.json()
+    assert len(beamlines) == 1
+
+    response = rest_client.patch(f"{API_URL_PREFIX}/beamline/{beamline1_uid}", json={"add_components": [component2]})
     assert response.status_code == 200
-    component2_uid = response.json()['uids'][0]
-
-    response: BasicComponent = rest_client.get(f"{API_URL_PREFIX}/component/{component2_uid}")
-    assert response.status_code == 200, f"oops {response.text}"
     
-    source = response.json()
-    assert source['uid'] == component2_uid
-
-    beamline1['components_uids'] = [component1_uid, component2_uid]
-    response = rest_client.post(f"{API_URL_PREFIX}/beamlines", json=beamline1)
+    component1_uid = beamline['components'][0]['uid']
+    response = rest_client.patch(f"{API_URL_PREFIX}/beamline/{beamline1_uid}", json={"remove_components": [component1_uid]})
     assert response.status_code == 200
-    beamline_uid = response.json()['uid']
-
-    response: ClientBeamline = rest_client.get(f"{API_URL_PREFIX}/beamline/{beamline_uid}")
-    assert response.status_code == 200, f"oops {response.text}"
     
-    source = response.json()
-    assert source['uid'] == beamline_uid
+    response: Beamline = rest_client.get(f"{API_URL_PREFIX}/beamline/{beamline1_uid}")
+    assert len(response.json()['components']) == 1
 
+    response: rest_client.delete(f"{API_URL_PREFIX}/beamline/{beamline1_uid}")
+    assert response.status_code == 200
 
-
+    
 component1 = {
-    "prefix": "component1", 
-    "name": "test1", 
-    "type": "control", 
-    "id": "comp1", 
-    "min": 0, 
-    "max": 100, 
-    "step": 1, 
-    "units": '°'}
+    "name": "name",
+    "prefix": "prefix",
+    "active": False,
+    "device_class": "ophyd.EpicsMotor",
+    }
 
 
 component2 = {
-    "prefix": "component2", 
-    "name": "test2", 
-    "type": "control", 
-    "id": "comp2", 
-    "min": 0, 
-    "max": 25, 
-    "step": 1, 
-    "units": 'mm'}
+    "name": "name",
+    "prefix": "prefix",
+    "active": True,
+    "device_class": "ophyd.EpicsMotor",
+    }
 
 
 beamline1 = {
-    "version": 1,
-    "name": "beamline1"
-}
+    "name": "beamline1",
+    "qserver": {"url": "https://localhost", "api_key": "dummy_key"},
+    "components": [component1]
+    }
 

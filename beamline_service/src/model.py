@@ -1,45 +1,62 @@
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Extra, Field
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-SCHEMA_VERSION = "0.0"
+
+SCHEMA_VERSION = "0.1"
 DEFAULT_UID = "342e4568-e23b-12d3-a456-526714178000"
-DEFAULT_UID_LIST = [DEFAULT_UID]
+DEFAULT_TIME = datetime.utcnow()
 
 
-class ComponentType(str, Enum):
-    control = "control"
-    detector = "detector"
+class DeviceType(str, Enum):
+    control = "ophyd.EpicsMotor"
+    signal = "ophyd.EpicsSignal"
+    detector = "ophyd.AreaDetector"
 
 
-class BasicComponent(BaseModel):
-    schema_version: int = 1                         # data schema version
+class BeamlineComponent(BaseModel):
+    schema_version: str = SCHEMA_VERSION
     uid: str = DEFAULT_UID
-    id: str = Field(description="base id for dash GUI components")
-    type: ComponentType
     name: str = Field(description="epics name")
     prefix: str = Field(description="epics prefix")
-    timeout: Optional[float] = 2.0
-    units: str = Field(description="units")
-    min: Optional[float] = Field(description="minimum position")
-    max: Optional[float] = Field(description="maximum position")
-    step: Optional[float] = Field(description="step size")
-    settle_time: Optional[float] = Field(description="amount of time to wait after moves to report status completion")
-    gui_comp: Optional[List] = []                   # GUI component
-    comp: Optional[Any] = None                      # ophyd object
-    status: str = 'Online'
+    active: bool = Field(description="the component is active")
+    device_class: DeviceType
+    documentation: Optional[str]
+    kwargs: Optional[Dict]
+    creation: datetime = DEFAULT_TIME
+    last_edit: datetime = DEFAULT_TIME
+    unit: Optional[str] = Field(description="unit")
+    z: Optional[float] = Field(description="")
+    port: Optional[str] = Field(description="port connection")
+
+
+class QueueServer(BaseModel):
+    url: str = Field(description="Queue-server URL")
+    api_key: str = Field(description="API key to server")
 
 
 class Beamline(BaseModel):
-    uid: str = DEFAULT_UID
     schema_version: str = SCHEMA_VERSION
-    version: int
-    name: str
-    components_uids: List[str] = DEFAULT_UID_LIST
+    uid: str = DEFAULT_UID
+    name: str = Field(description="beamline name")
+    creation: datetime = DEFAULT_TIME
+    last_edit: datetime = DEFAULT_TIME
+    qserver: QueueServer
+    components: Optional[List[BeamlineComponent]] = []
     class Config:
         extra = Extra.ignore
 
 
-class ClientBeamline(Beamline):
-    Components: List[BasicComponent] = []
+class BeamlinePatchRequest(BaseModel):
+    add_components: Optional[List[BeamlineComponent]]
+    remove_components: Optional[List[str]]
+
+
+class Scan(BaseModel):
+    name: str = Field(description="name for scan")
+    detectors: List = Field(description="list of detectors")
+    controls: str = Field(description="control to move")
+    start: float = Field(description="start position for scan")
+    stop: float = Field(description="stop position for scan")
+    num_step: int = Field(description="number of steps for scan")

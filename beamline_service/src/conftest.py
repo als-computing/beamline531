@@ -2,8 +2,8 @@ from fastapi.testclient import TestClient
 import pytest
 import mongomock
 
-from api import app, set_component_service, svc_context
-from component_service import ComponentService
+from main import app, set_beamline_service, svc_context
+from beamline_service import BeamlineService
 
 
 @pytest.fixture(scope="module")
@@ -12,12 +12,12 @@ def mongodb():
 
 
 @pytest.fixture(scope="module")
-def component_svc(mongodb):
-    component_svc = ComponentService(mongodb)
-    return component_svc
+def beamline_svc(mongodb):
+    beamline_svc = BeamlineService(mongodb)
+    return beamline_svc
 
 
 @pytest.fixture(scope="module")
-def rest_client(component_svc):
-    set_component_service(component_svc)
+def rest_client(beamline_svc):
+    set_beamline_service(beamline_svc)
     return TestClient(app)

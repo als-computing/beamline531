@@ -1,19 +1,15 @@
 import logging, os
 from typing import List, Optional
 
-from fastapi import FastAPI, Query as FastQuery, HTTPException
 from pydantic import BaseModel
 from starlette.config import Config
 import uvicorn
 
-from model import ClientBeamline, Beamline, BasicComponent
-from component_service import ComponentService, Context
+from fastapi import FastAPI, Query as FastQuery
+from model import Beamline, BeamlinePatchRequest, Scan
+from beamline_service import BeamlineService, Context
 
-logger = logging.getLogger('component_api')
-
-DEFAULT_PAGE_SIZE = 20
-MONGO_DB_USERNAME = str(os.environ['MONGO_INITDB_ROOT_USERNAME'])
-MONGO_DB_PASSWORD = str(os.environ['MONGO_INITDB_ROOT_PASSWORD'])
+logger = logging.getLogger('beamline_api')
 
 def init_logging():
     ch = logging.StreamHandler()
@@ -23,10 +19,11 @@ def init_logging():
     logger.setLevel(COMP_LOG_LEVEL)
 
 
-config = Config(".env")
+MONGO_DB_USERNAME = str(os.environ.get('MONGO_INITDB_ROOT_USERNAME', default=""))
+MONGO_DB_PASSWORD = str(os.environ.get('MONGO_INITDB_ROOT_PASSWORD', default=""))
 MONGO_DB_URI = "mongodb://%s:%s@mongodb_bl531:27017/?authSource=admin" % (MONGO_DB_USERNAME, MONGO_DB_PASSWORD)
-COMP_DB_NAME = config("COMP_DB_NAME", cast=str, default="component")
-COMP_LOG_LEVEL = config("COMP_LOG_LEVEL", cast=str, default="INFO")
+COMP_DB_NAME = "beamline"
+COMP_LOG_LEVEL = "INFO"
 
 API_URL_PREFIX = "/api/v0"
 
@@ -44,44 +41,75 @@ async def startup_event():
     from pymongo import MongoClient
     logger.debug('!!!!!!!!!starting server')
     db = MongoClient(MONGO_DB_URI)
-    set_component_service(ComponentService(db))
+    set_beamline_service(BeamlineService(db))
 
 
-def set_component_service(new_component_svc: ComponentService):
-    global component_svc
-    component_svc = new_component_svc
+def set_beamline_service(new_beamline_svc: BeamlineService):
+    global beamline_svc
+    beamline_svc = new_beamline_svc
 
 
-class CreateComponentsResponseModel(BaseModel):
-    uids: List[str]
+class CreatePatchResponseModel(BaseModel):
+    added_uids: Optional[List[str]]
+    removed_uids: Optional[List[str]]
 
 
 class CreateResponseModel(BaseModel):
     uid: str
 
 
-@app.post(API_URL_PREFIX + '/components', tags=['components'], response_model=CreateComponentsResponseModel)
-def add_components(components: List[BasicComponent]):
-    new_components_uids = component_svc.create_components(components)
-    return CreateComponentsResponseModel(uids=new_components_uids)
-
-
-@app.get(API_URL_PREFIX + '/component/{uid}', tags=['components'], response_model=BasicComponent)
-def get_component(uid: str) -> BasicComponent:
-    component = component_svc.get_component(uid)
-    return component
-
-
-@app.post(API_URL_PREFIX + '/beamlines', tags=['beamlines'], response_model=CreateResponseModel)
-def add_beamline(beamline: Beamline):
-    new_beamline_uid = component_svc.create_beamline(beamline)
+@app.post(API_URL_PREFIX + '/beamline', tags=['beamline'], response_model=CreateResponseModel)
+def add_beamline(beamline: Beamline) -> CreateResponseModel:
+    new_beamline_uid = beamline_svc.create_beamline(beamline)
     return CreateResponseModel(uid=new_beamline_uid)
 
 
-@app.get(API_URL_PREFIX + '/beamline/{uid}', tags=['beamlines'], response_model=ClientBeamline)
-def get_beamline(uid: str) -> ClientBeamline:
-    beamline = component_svc.get_beamline(uid)
+@app.patch(API_URL_PREFIX + '/beamline/{uid}', tags=['beamline'], response_model=CreatePatchResponseModel)
+def modify_beamline_components(uid: str, req: BeamlinePatchRequest) -> CreatePatchResponseModel:
+    added_uids, removed_uids = beamline_svc.modify_beamline_components(uid, req)
+    return CreatePatchResponseModel(added_uids=added_uids, removed_uids=removed_uids)
+
+
+@app.get(API_URL_PREFIX + '/beamlines', tags=['beamline'], response_model=List[Beamline])
+def get_beamlines(names: Optional[List[str]]=FastQuery(None)) -> List[Beamline]:
+    beamlines = beamline_svc.get_beamlines(names)
+    return beamlines
+
+
+@app.get(API_URL_PREFIX + '/beamline/{uid}', tags=['beamline'], response_model=Beamline)
+def get_beamline(uid: str) -> Beamline:
+    beamline = beamline_svc.get_beamline(uid)
     return beamline
+
+
+@app.delete(API_URL_PREFIX + '/beamline/{uid}', tags=['beamline'], response_model=Beamline)
+def delete_beamline(uid: str) -> str:
+    beamline_uid = beamline_svc.delete_beamline(uid)
+    return CreateResponseModel(uid=beamline_uid)
+
+
+# @app.post(API_URL_PREFIX + 'beamline/{uid}/qserver/status', tags=['qserver'], response_model=str)
+# def qserver_status(uid: str) -> str:
+#     response = beamline_svc.get_qserver_status(uid)
+#     return response
+
+
+# @app.post(API_URL_PREFIX + 'beamline/{uid}/qserver/open', tags=['qserver'], response_model=str)
+# def qserver_open(uid: str) -> str:
+#     response = beamline_svc.open_qserver_env(uid)
+#     return response
+
+
+# @app.post(API_URL_PREFIX + 'beamline/{uid}/qserver/close', tags=['qserver'], response_model=str)
+# def qserver_close(uid: str) -> str:
+#     response = beamline_svc.close_qserver_env(uid)
+#     return response
+
+
+# @app.post(API_URL_PREFIX + 'beamline/{uid}/add_scan', tags=['scan'], response_model=str)
+# def add_scan(uid: str, scan: Scan) -> str:
+#     response = beamline_svc.add_scan(uid, scan)
+#     return response
 
 
 if __name__ == '__main__':
