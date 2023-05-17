@@ -24,6 +24,7 @@ version = '0'
 controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
 
 # Get beamline PVs from MongoDB as OphydDash object
+# requests.get('API_URL/bl531') --> json file (controls + detectors)
 l = getListOphydDashItems(mongoConfig_path = '/home/bl531/bl531_gui/beamline531_gyl/beamline_service/epicsDB/config.json')
 COMPONENT_LIST = BeamlineComponents(l)
 COMPONENT_GUI = COMPONENT_LIST.get_gui()
