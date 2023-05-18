@@ -5,19 +5,68 @@ import plotly.express as px
 import pandas as pd
 from pymongo.errors import ConnectionFailure
 from bson.objectid import ObjectId
+import bson.json_util as json_util
 from datetime import datetime
 from happi.backends.mongo_db import MongoBackend
 from beamline_service.epicsDB.OphydDash import OphydDash
 
-def getListOphydDashItems(mongoConfig_path = None):
-    if mongoConfig_path is None:
-        mongoConfig_path = '/home/bl531/bl531_gui/beamline531_gyl/beamline_service/epicsDB/config_test.json'
+DEFAULT_EPICS_DB = './beamline_service/epicsDB/epicsHappi_DB.json'
 
-    client = happiClientMongoDB(mongoConfig_path)
-    itemlist = client.all_items
+def getListOphydDashItems(mongoConfig_path = None, json_path = None):
+    """
+    Get list of ophydDash items. If mongoConfig_path is given, it will 
+    attempt to save the collection in JSON file. If mongoConfig_path is
+    not given but json_path is defined, this JSON file will be loaded
+    using Happi.Client JSON backend.
 
-    ophydash_list = [OphydDash(l) for l in itemlist]
-    return ophydash_list
+    Parameters
+    ----------
+    mongoConfig_path : str, optional
+        path of mongo configuration file
+    json_path : str, optional
+        path of a JSON EPICs PV collection
+    
+    Returns
+      ------
+      list, list of ophyddash object 
+    
+    """
+    if mongoConfig_path is not None:
+        config_dic = getConfigs(fpath_config=mongoConfig_path)
+        fname = saveCollectionToJson(config_dic=config_dic)
+    elif json_path is not None:
+        fname = json_path
+    else:
+        fname = DEFAULT_EPICS_DB
+    
+    try:
+        client = happi.Client(path=fname)
+        itemlist = client.all_items
+        ophydash_list = [OphydDash(l) for l in itemlist]
+        return ophydash_list
+    except Exception as e:
+        print('Could not get the item list due to %s'%e)
+    # if mongoConfig_path is None:
+    #     mongoConfig_path = '/home/bl531/bl531_gui/beamline531_gyl/beamline_service/epicsDB/config_test.json'
+
+    # client = happiClientMongoDB(mongoConfig_path)
+    # itemlist = client.all_items
+
+
+
+def saveCollectionToJson(config_dic:'dict', fname:'str'=None):
+    clientpath = getClientPath(input_dic=config_dic)
+    collection = getCollection(clientpath, dbName=config_dic['db'], collectionName=config_dic['collection'])
+    df = pd.DataFrame(list(collection.find()))
+    dflist = df.to_dict('records')
+    json_dic = {d['name']:d for d in dflist}
+    if fname is None:
+        now = datetime.now()
+        dt_string = now.strftime("%a %b %d %Y %H:%W:%S")
+        fname = './beamline_service/epicsDB/temp/pvdb_%s.json'%dt_string
+    with open(fname, 'w') as f:
+        f.write(json_util.dumps(json_dic))
+    return fname
 
 def happiClientMongoDB(mongoConfig_path: 'str'):
     mongoConfig = getConfigs(mongoConfig_path)
@@ -62,8 +111,8 @@ def pushData_list(clientPath, dbName, collectionName, pvlist):
     collection = client.get_database(dbName).get_collection(collectionName)
     for v in pvlist:
         try:
-            del v['kwargs']
-            del v['_id']
+            v.pop('_id')
+            v.pop('kwargs')
         except:
             print('No such fields')
 

@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pvaccess as pva
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 # from matplotlib.pyplot import plot, draw, show, ion
 # ion()
@@ -11,12 +11,11 @@ import matplotlib.pyplot as plt
 
 # %%
 class pvaMonitor:
-    def __init__(self, fig, ax):
+    def __init__(self):
         self.x = 0
         self.y = 0
         self.uid = 0
-        self.fig = fig
-        self.ax = ax
+        self.fig, self.ax = plt.subplots()
         self.img = None
         self.data = None
 
@@ -30,35 +29,27 @@ class pvaMonitor:
     def plotData(self):
         print('Having issue plotting the live view, uid=%d'%self.uid)
 
-        # self.img = self.ax.imshow(self.data, 'gray')
-        # self.fig.show()
+        # # self.img = self.ax.imshow(self.data, 'gray')
+        # # self.fig.show()
         # self.img = self.ax.imshow(self.data, 'gray') if self.img is None else self.img
         # self.img.set_data(self.data)
+        # self.fig.show()
 
         return
 
 # %%
-def main(pvaChannel, pva_monitor):
+def main(pvaChannel):
     c = pva.Channel(pvaChannel)
-    c.subscribe('monitor', pva_monitor.monitor)
+    m = pvaMonitor()
+    c.subscribe('monitor', m.monitor)
     c.startMonitor('')
     time.sleep(100)
+    return c, m
 
 # %%
 if __name__ == '__main__':
-    fig = plt.figure()
-    ax = fig.gca()
-    ax.imshow(np.zeros((1024,1024)),'gray')
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    plt.ion()
-    plt.show()
-
     pvaChannel = '13SIM1:Pva1:Image'
-    m = pvaMonitor(fig, ax)
-
-    main(pvaChannel, m)
+    c, m = main(pvaChannel)
 
  
 

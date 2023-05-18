@@ -1,0 +1,32 @@
+[
+    {
+        "_id": {
+            "$oid": "6412405023d463e59014d017"
+        },
+        "active": true,
+        "args": [
+            "{{prefix}}"
+        ],
+        "beamline": "5.3.1",
+        "creation": "Tue Feb 28 08:27:04 2023",
+        "detailed_screen": null,
+        "device_class": "ophyd.Signal",
+        "documentation": null,
+        "embedded_screen": null,
+        "engineering_screen": null,
+        "functional_group": "Beamstop-Current",
+        "last_edit": "Wed Mar 29 2023 11:13:49",
+        "lightpath": false,
+        "location_group": "beamstop",
+        "macros": null,
+        "name": "Beamstop-Current",
+        "parent": null,
+        "prefix": "bl201-beamstop:current",
+        "stand": null,
+        "system": null,
+        "type": "OphydItem",
+        "z": -1.0,
+        "unit": "a.u.",
+        "port": "undefined"
+    }
+]
