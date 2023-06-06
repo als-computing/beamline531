@@ -1,10 +1,9 @@
 from datetime import datetime
 from pymongo.mongo_client import MongoClient
-import requests
 from typing import Iterator, List
 from uuid import uuid4
 
-from model import Beamline, BeamlinePatchRequest, Scan
+from src.model import Beamline, BeamlinePatchRequest, BeamlineComponent
 
 
 class BeamlineNotFound(Exception):
@@ -12,22 +11,23 @@ class BeamlineNotFound(Exception):
 
 
 class BeamlineService():
-    """
+    '''
     Access and management of the Beamline database
-    """
+    '''
 
     def __init__(self, client, db_name=None):
-        """
+        '''
         Initializes BeamlineService
         Args:
-            clinet:     Mongo client
+            client:     Mongo client
             db_name:    Database name
-        """
+        '''
         if db_name is None:
             db_name = 'beamline_components'
         self._db = client[db_name]
         self._collection_beamline = self._db.beamline
         self._create_indexes()
+        pass
     
     def create_beamline(self, beamline: Beamline) -> str:
         '''
@@ -61,6 +61,17 @@ class BeamlineService():
         self._clean_id(item)
         beamline = Beamline.parse_obj(item)
         return beamline
+    
+    def get_components(self, uid: str) -> List[BeamlineComponent]:
+        '''
+        Retrieves all the components of a beamline from the database
+        Args:
+            uid:            Beamline uid
+        Returns:
+            components:     List of beamline components
+        '''
+        beamline = self.get_beamline(uid)
+        return beamline.components
     
     def get_beamlines(self, names: List[str]=None) -> Iterator[Beamline]:
         '''
@@ -141,45 +152,6 @@ class BeamlineService():
                     if component_uid not in current_components_uid:
                         removed_components_uid[cont] = -1
         return added_components_uid, removed_components_uid
-
-    def get_qserver_status(self, beamline_uid: str):
-        beamline = self.get_beamline(uid= beamline_uid)
-        response = requests.get(f'{beamline.qserver.url}/status', \
-                                headers={'Authorization': f'ApiKey {beamline.qserver.api_key}'})
-        if response.status_code == 200:
-            return str(response.json())
-        else:
-            return f'Error code: {response.status_code}, {response.json()}'
-
-    def open_qserver_status(self, beamline_uid: str):
-        beamline = self.get_beamline(uid= beamline_uid)
-        response = requests.post(f'{beamline.qserver.url}/environment/open', \
-                                 headers={'Authorization': f'ApiKey {beamline.qserver.api_key}'})
-        if response.status_code == 200:
-            return str(response.json())
-        else:
-            return f'Error code: {response.status_code}, {response.json()}'
-    
-    def close_qserver_status(self, beamline_uid: str):
-        beamline = self.get_beamline(uid= beamline_uid)
-        response = requests.post(f'{beamline.qserver.url}/environment/close', \
-                                 headers={'Authorization': f'ApiKey {beamline.qserver.api_key}'})
-        if response.status_code == 200:
-            return str(response.json())
-        else:
-            return f'Error code: {response.status_code}, {response.json()}'
-    
-    def add_scan(self, beamline_uid: str, scan: Scan):
-        beamline = self.get_beamline(uid= beamline_uid)
-        item = {"item_type": "plan", "name": scan.name, "args": [scan.detectors, scan.controls, \
-                                                                 scan.start, scan.stop, scan.num_step]}
-        response = requests.post(f'{beamline.qserver.url}/queue/item/add', \
-                                 headers={'Authorization': f'ApiKey {beamline.qserver.api_key}', \
-                                          'item': item})
-        if response.status_code == 200:
-            return str(response.json())
-        else:
-            return f'Error code: {response.status_code}, {response.json()}'
     
     def _create_indexes(self):
         self._collection_beamline.create_index([('uid', 1)], unique=True)
@@ -193,11 +165,3 @@ class BeamlineService():
         """
         if '_id' in data:
             del data['_id']
-
-
-class Context:
-    db: MongoClient = None
-    beamline_svc: BeamlineService = None
-
-
-context = Context

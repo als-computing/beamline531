@@ -9,6 +9,16 @@ DEFAULT_UID = "342e4568-e23b-12d3-a456-526714178000"
 DEFAULT_TIME = datetime.utcnow()
 
 
+## Auth-related classes
+
+class APIClient(BaseModel):
+    hashed_key: str = Field(description="API key that can be given to a client")
+    client: str = Field(description="Name of client who key is given to")
+    api: str = Field(description="Name of API that key gives access to")
+
+
+## Beamline-related classes
+
 class DeviceType(str, Enum):
     control = "ophyd.EpicsMotor"
     signal = "ophyd.EpicsSignal"
@@ -31,18 +41,12 @@ class BeamlineComponent(BaseModel):
     port: Optional[str] = Field(description="port connection")
 
 
-class QueueServer(BaseModel):
-    url: str = Field(description="Queue-server URL")
-    api_key: str = Field(description="API key to server")
-
-
 class Beamline(BaseModel):
     schema_version: str = SCHEMA_VERSION
     uid: str = DEFAULT_UID
     name: str = Field(description="beamline name")
     creation: datetime = DEFAULT_TIME
     last_edit: datetime = DEFAULT_TIME
-    qserver: QueueServer
     components: Optional[List[BeamlineComponent]] = []
     class Config:
         extra = Extra.ignore
@@ -51,12 +55,3 @@ class Beamline(BaseModel):
 class BeamlinePatchRequest(BaseModel):
     add_components: Optional[List[BeamlineComponent]]
     remove_components: Optional[List[str]]
-
-
-class Scan(BaseModel):
-    name: str = Field(description="name for scan")
-    detectors: List = Field(description="list of detectors")
-    controls: str = Field(description="control to move")
-    start: float = Field(description="start position for scan")
-    stop: float = Field(description="stop position for scan")
-    num_step: int = Field(description="number of steps for scan")
