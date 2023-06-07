@@ -42,6 +42,7 @@ class BeamlineService():
         beamline.creation = current_time
         beamline.last_edit = current_time
         for cont in range(len(beamline.components)):
+            beamline.components[cont].uid = str(uuid4())
             beamline.components[cont].creation = current_time
             beamline.components[cont].last_edit = current_time
         self._collection_beamline.insert_one(beamline.dict())
@@ -118,6 +119,7 @@ class BeamlineService():
         '''
         added_components_uid = []
         removed_components_uid = []
+        modify_components_uid = []
         # get beamline
         beamline = self.get_beamline(uid= beamline_uid)
         # add beamline components
@@ -151,7 +153,17 @@ class BeamlineService():
                 for cont, component_uid in enumerate(removed_components_uid):
                     if component_uid not in current_components_uid:
                         removed_components_uid[cont] = -1
-        return added_components_uid, removed_components_uid
+        modify_components = req.modify_components
+        if modify_components:
+            for comp in modify_components:
+                comp_uid = comp.uid
+                current_time = datetime.utcnow()
+                comp.last_edit = current_time
+                comp_dict = comp.dict()
+                result = self._collection_beamline.update_one({"uid": beamline_uid, "components.uid": comp_uid}, \
+                                                              {"$set": {"components.$" : comp_dict , "last_edit": current_time}})
+                modify_components_uid.append(comp_uid)
+        return added_components_uid, removed_components_uid, modify_components_uid
     
     def _create_indexes(self):
         self._collection_beamline.create_index([('uid', 1)], unique=True)

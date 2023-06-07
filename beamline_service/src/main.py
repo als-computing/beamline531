@@ -86,6 +86,7 @@ def set_auth_service(new_auth_svc: AuthService):
 class CreatePatchResponseModel(BaseModel):
     added_uids: Optional[List[str]]
     removed_uids: Optional[List[str]]
+    modified_uids: Optional[List[str]]
 
 
 class CreateResponseModel(BaseModel):
@@ -123,8 +124,9 @@ async def modify_beamline_components(
     if not client_key:
         logger.info("forbidden  {api_key}")
         raise HTTPException(status_code=403)
-    added_uids, removed_uids = beamline_svc.modify_beamline_components(uid, req)
-    return CreatePatchResponseModel(added_uids=added_uids, removed_uids=removed_uids)
+    added_uids, removed_uids, modified_uids = beamline_svc.modify_beamline_components(uid, req)
+    return CreatePatchResponseModel(added_uids=added_uids, removed_uids=removed_uids, \
+                                    modified_uids=modified_uids)
 
 
 @app.get(
@@ -181,7 +183,7 @@ async def get_beamline_components(
 @app.delete(
         API_URL_PREFIX + '/beamline/{uid}', 
         tags=['beamline'], 
-        response_model=Beamline
+        response_model=CreateResponseModel
         )
 async def delete_beamline(
     uid: str, 

@@ -46,6 +46,17 @@ def test_beamline(rest_client: TestClient, auth_svc):
                                headers={API_KEY_NAME: key})
     assert len(response.json()) == 1
 
+    new_components = response.json()
+    new_components[0]['name'] = 'new_name'
+    response = rest_client.patch(f"{API_URL_PREFIX}/beamline/{beamline1_uid}", 
+                                 json={"modify_components": new_components}, 
+                                 headers={API_KEY_NAME: key})
+    assert response.status_code == 200
+
+    response = rest_client.get(f"{API_URL_PREFIX}/beamline/{beamline1_uid}/components", 
+                               headers={API_KEY_NAME: key})
+    assert len(response.json()) == 1
+
     response: rest_client.delete(f"{API_URL_PREFIX}/beamline/{beamline1_uid}", 
                                  headers={API_KEY_NAME: key})
     assert response.status_code == 200

@@ -55,3 +55,4 @@ class Beamline(BaseModel):
 class BeamlinePatchRequest(BaseModel):
     add_components: Optional[List[BeamlineComponent]]
     remove_components: Optional[List[str]]
+    modify_components: Optional[List[BeamlineComponent]]
