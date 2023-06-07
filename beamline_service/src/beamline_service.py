@@ -1,5 +1,4 @@
 from datetime import datetime
-from pymongo.mongo_client import MongoClient
 from typing import Iterator, List
 from uuid import uuid4
 
