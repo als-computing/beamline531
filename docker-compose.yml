@@ -1,17 +1,7 @@
 version: '3.7'
 
 services:
-  beamline_api:
-    build:
-      context: 'beamline_service'
-      dockerfile: 'docker/Dockerfile'
-    command: 'python src/main.py'
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: '${MONGO_INITDB_ROOT_USERNAME}'
-      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
-    ports:
-      - '8090:8090'
-    
+
   mongo:
     image: mongo:4.4
     restart: always
@@ -22,6 +12,33 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
     volumes:
       - "./database/:/data/db"
+  
+  beamline_api:
+    build:
+      context: 'beamline_service'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/main.py'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_INITDB_ROOT_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
+    ports:
+      - '8090:8090'
+    depends_on:
+      - mongo
+
+  manager_frontend:
+    build:
+      context: 'client'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/epics_db/launch_web_db.py'
+    environment:
+      BL_API_URL: 'http://beamline_api:8090/api/v0'
+      BL_API_KEY: '${BL_API_KEY}'
+      BL_UID: '${BL_UID}'
+    ports:
+      - '8050:8050'
+    depends_on:
+      - beamline_api
   
 networks: 
   default:
