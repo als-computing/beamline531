@@ -1,16 +1,18 @@
+import os
+
 from dash import Dash, html, dcc, dash_table
-import plotly.express as px
-import numpy as np
 import dash_bootstrap_components as dbc
+import numpy as np
+import plotly.express as px
+import requests
 
-from helper_utils import BasicComponent, ComponentType, BeamlineComponents
-from helper_utils import comp_list_to_options
+from src.epics_db.epicsdb_utils import get_ophyd_dash_items
+from src.model import BeamlineComponents
+from src.helper_utils import comp_list_to_options
 
-import sys
-sys.path.append('/home/bl531/bl531_gui/beamline531_gyl')
 
-from beamline_service.epicsDB.epicsdb_utils import getListOphydDashItems
-from beamline_service.pva.pvaMonitor import pvaMonitor
+class BeamlineComponentsNotFound(Exception):
+    pass
 
 
 #### SETUP DASH APP ####
@@ -21,22 +23,15 @@ server = app.server
 app.title = "BL 5.3.1"
 app._favicon = 'LBL_icon.ico'
 
-# Placeholder for control API
-beamline = 'als_5_3_1'
-version = '0'
-controls_url = f'http://beamline_control:8080/api/v0/beamline/{beamline}/{version}'
-
-# # Manually defining the controls for now
-# mono = BasicComponent(prefix="IOC:m1", name="Mono theta", type=ComponentType('control'), id="mono", min=0, max=100, step=1, units='°', settle_time=2.0)
-# longitudinal = BasicComponent(prefix="IOC:m3", name="Longitudinal stage", type=ComponentType('control'), id="long", min=-100, max=100, step=1, units='mm', settle_time=2.0)
-# current = BasicComponent(prefix="bl201-beamstop:current", name="Current", type=ComponentType('detector'), id="current", units="\u03BCA")
-
-# COMPONENT_LIST = BeamlineComponents(comp_list=[mono, longitudinal, current])
-# COMPONENT_GUI = COMPONENT_LIST.get_gui()
-
 # Get beamline PVs from MongoDB as OphydDash object
-l = getListOphydDashItems()
-COMPONENT_LIST = BeamlineComponents(l)
+BL_API_URL = str(os.environ.get('BL_API_URL'))
+BL_API_KEY = str(os.environ.get('BL_API_KEY'))
+BL_UID = str(os.environ.get('BL_UID'))
+response = requests.get(f'{BL_API_URL}/beamline/{BL_UID}/components', headers={"api_key": BL_API_KEY})
+if response.status_code != 200:
+    raise BeamlineComponentsNotFound(f'Status code: {response.status_code}')
+ophyd_items = get_ophyd_dash_items(raw_json=response.json())
+COMPONENT_LIST = BeamlineComponents(ophyd_items)
 COMPONENT_GUI = COMPONENT_LIST.get_gui()
 dropdown_scalers = ['Time'] + COMPONENT_LIST.comp_id_list
 
