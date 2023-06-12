@@ -25,6 +25,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
     depends_on:
       - mongo
+    ports:
+      - 8090:8090
     networks:
       - bl_service
 
@@ -44,25 +46,26 @@ services:
     networks:
       - bl_service
   
-  # client_frontend:
-  #   build:
-  #     context: 'client'
-  #     dockerfile: 'docker/Dockerfile'
-  #   command: 'python src/main.py'
-  #   environment:
-  #     BL_API_URL: 'http://beamline_api:8090/api/v0'
-  #     BL_API_KEY: '${BL_API_KEY}'
-  #     BL_UID: '${BL_UID}'
-  #   ports:
-  #     - '8052:8052'
-  #   depends_on:
-  #     - beamline_api
-  #   networks:
-  #     - bl_service
-  #     - qs_net
+  client_frontend:
+    build:
+      context: 'client'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/main.py'
+    environment:
+      BL_API_URL: 'http://beamline_api:8090/api/v0'
+      BL_API_KEY: '${BL_API_KEY}'
+      BL_UID: '${BL_UID}'
+    ports:
+      - '8052:8052'
+    depends_on:
+      - beamline_api
+    networks:
+      bl_service:
+      qs_net:
+        ipv4_address: 192.168.10.153
   
 networks: 
   bl_service:
     name: "bl_service"
-  # qs_net:
-  #   external: true
+  qs_net:
+    external: true

@@ -8,7 +8,7 @@ from happi.backends.core import ItemMeta
 class RawJSONBackend(JSONBackend):
     def __init__(
         self,
-        raw_json: str,
+        raw_json: dict,
         initialize: bool = False
     ) -> None:
         '''
@@ -26,7 +26,7 @@ class RawJSONBackend(JSONBackend):
         '''
         Load the JSON raw data
         '''
-        return json.loads(self.raw_json)
+        return self.raw_json
 
 
 class RawJSONClient(Client):

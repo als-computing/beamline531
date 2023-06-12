@@ -11,28 +11,30 @@ class OphydDash():
     _highLimit = 1
     _lowLimit = -1
 
-    def __init__(self, ophyd_item):
-        # self.name = ophyd_item.name
-        self.name = ophyd_item.extraneous['functional_group']
-        self.type = ophyd_item.device_class
-        self.prefix = ophyd_item.prefix
-        self.id = ophyd_item.extraneous['functional_group']
-        self.ophyd_item = ophyd_item
+    def __init__(self, ophydItem):
+        # self.name = ophydItem.name
+        self.name = ophydItem.extraneous['functional_group']
+        self.type = ophydItem.device_class
+        self.prefix = ophydItem.prefix
+        self.id = ophydItem.extraneous['functional_group']
+        self.ophydItem = ophydItem
         self.status = 'Offline'
 
-        self.ophyd_object = None
+        self.ophydObj = None
         self.gui_comp = None
+        self.precision = 5
 
         self.connect()
         self.update_status()
         self.set_settle_time()
-        self.assign_gui()
+        self.assignGUI()
 
     def connect(self):
         try:
-            self.ophyd_object = from_container(self.ophyd_item, attach_md=True)
+            self.ophydObj = from_container(self.ophydItem, attach_md=True)
+            # self.ophyObj.wait_for_connection(timeout=0.2)
             time.sleep(0.2)
-            self.update_status
+            # self.update_status
         except Exception as e:
             logging.error(f'Could not connect component {self.name} due to: {e}')
 
@@ -45,9 +47,12 @@ class OphydDash():
         settleTime : float, optional
             Settling time of motor, default value is 0.05 second
         """
-        if self.ophyd_object is not None:
-            if self.ophyd_object.connected:
-                self.ophyd_object.settle_time = settleTime
+        if self.ophydObj is not None:
+            if self.ophydObj.connected:
+                try:
+                    self.ophydObj.settle_time = settleTime
+                except Exception as e:
+                    logging.error(f'Could not connect component {self.name} due to: {e}')
             else:
                 print(f'{self.name} is not connected')
 
@@ -56,25 +61,46 @@ class OphydDash():
         Update motor status
 
         """
-        self.status = 'Online' if self.ophyd_object.connected else 'Offline'
-        self.units = self.ophyd_object.egu if self.ophyd_object.connected else 'None'
-        self.min = self.ophyd_object.get_lim(self._lowLimit) if self.ophyd_object.connected else 0
-        self.max = self.ophyd_object.get_lim(self._highLimit) if self.ophyd_object.connected else 0
-        self.position = self.ophyd_object.position if self.ophyd_object.connected else np.nan
+        self.status = 'Online' if self.ophydObj.connected else 'Offline'
+        if self.type == 'ophyd.EpicsMotor':
+            self._update_motor()
+        elif self.type == 'ophyd.EpicsSignal':
+            self._update_signal()
 
-    def assign_gui(self):
+    def _update_motor(self):
+        if self.ophydObj is not None:
+            self.unit = self.ophydObj.egu if self.ophydObj.connected else 'None'
+            self.min = self.ophydObj.get_lim(self._lowLimit) if self.ophydObj.connected else 0
+            self.max = self.ophydObj.get_lim(self._highLimit) if self.ophydObj.connected else 0
+            self.position = self.ophydObj.position if self.ophydObj.connected else np.nan
+
+    def _update_signal(self):
+        if self.ophydObj is not None:
+            metadata = self.ophydObj.metadata
+            self.unit = metadata['units'] if self.ophydObj.connected else 'None'
+            self.min = metadata['lower_ctrl_limit'] if self.ophydObj.connected else 0
+            self.max = metadata['upper_ctrl_limit'] if self.ophydObj.connected else 0
+            try:
+                metadata = self.ophydObj.read()
+                self.position = metadata[self.ophydItem.name]['value']
+            except Exception as e:
+                self.position = np.nan
+                logging.error(f'Could not read component {self.name} due to: {e}')
+
+    def assignGUI(self):
         if self.type == 'ophyd.EpicsMotor':
             create_control_gui(self)
-        else:
+        elif self.type == 'ophyd.EpicsSignal':
             create_sensor_gui(self)
             
     def read(self):
         """
         Getting current position 
         """
-        if self.ophyd_object.connected:
+        if self.ophydObj.connected:
             try:
-                return self.ophyd_object.position
+                self.update_status()
+                return self.position
             except Exception as e:
                 logging.error(f'Could not read component {self.name} due to: {e}')
         else:
@@ -89,16 +115,17 @@ class OphydDash():
         target_position : float, required
             Target motor position
         """
-        if all([self.ophyd_object.connected,
+        if all([self.ophydObj.connected,
                 target_position > self.min,
                 target_position < self.max]):
             try:
-                self.ophyd_object.move(target_position)
+                self.ophydObj.move(target_position)
             except Exception as e:
                 logging.error(f'Could not move component {self.name} due to: {e}')
         else:
             logging.error(f'Could not move component {self.name}. Check if component is connected or the requested position is within range')
             
+
     
 def create_header(obj:'OphydDash'):
     '''
@@ -122,12 +149,13 @@ def create_header(obj:'OphydDash'):
                 )
     return header
 
-def create_sensor_gui(obj:'OphydDash', current_reading:'float'=0):
+def create_sensor_gui(obj:'OphydDash'):
     '''
     Creates the GUI components for the sensor
     '''
-    status_value = obj.status == 'Online'
-    header = obj.create_header()
+    obj.update_status()
+    header = create_header(obj)
+    current_reading = obj.position
     obj.gui_comp = [dbc.Card(id={'base': obj.id, 'type': 'control'},
                                 children=[
                                 dbc.CardHeader(header),
@@ -136,7 +164,7 @@ def create_sensor_gui(obj:'OphydDash', current_reading:'float'=0):
                                     dbc.Row(
                                         [dbc.Col(dbc.Label('Current Reading:', style={'textAlign': 'right'})),
                                             dbc.Col(html.P(id={'base': obj.id, 'type': 'current-pos'}, 
-                                                        children=f'{current_reading}{obj.units}', 
+                                                        children=f'{current_reading}{obj.unit}', 
                                                         style={'textAlign': 'left'}))],
                                     )
                                 ])
@@ -151,7 +179,7 @@ def create_control_gui(obj:'OphydDash'):
     # status_value = self.status == 'Online'
     obj.update_status()
     header = create_header(obj)
-    current_position = obj.position
+    current_position = np.round(obj.position, obj.precision)
     obj.gui_comp = [dbc.Card(id={'base': obj.id, 'type': 'control'},
                                 children=[
                                 dbc.CardHeader(header),
@@ -160,19 +188,18 @@ def create_control_gui(obj:'OphydDash'):
                                     dbc.Row(
                                         [dbc.Col(dbc.Label('Current Position:', style={'textAlign': 'right'})),
                                             dbc.Col(html.P(id={'base': obj.id, 'type': 'current-pos'}, 
-                                                        children=f'{obj.position if np.isnan(obj.position) else obj.ophyd_object.position} {obj.units}', 
+                                                        children=f'{obj.position if np.isnan(obj.position) else obj.ophydObj.position} {obj.unit}', 
                                                         style={'textAlign': 'left'}))],
                                     ),
                                     dbc.Row([
                                         # Absolute move controls
                                         dbc.Col([
-                                            dbc.Label(f'Absolute Move ({obj.units})', style={'textAlign': 'center'}),
+                                            dbc.Label(f'Absolute Move ({obj.unit})', style={'textAlign': 'center'}),
                                             dbc.Row(
                                                 [dbc.Col(
                                                     dcc.Input(id={'base': obj.id, 'type': 'target-absolute'}, 
-                                                                min=obj.min,
-                                                                max=obj.max,
-                                                                step=1,
+                                                                # min=obj.min,
+                                                                # max=obj.max,
                                                                 value=current_position, 
                                                                 type='number',
                                                                 disabled=not(obj.status),
@@ -186,7 +213,7 @@ def create_control_gui(obj:'OphydDash'):
                                         ]),
                                         # Relative move controls
                                         dbc.Col([
-                                            dbc.Label(f'Relative Move ({obj.units})', style={'textAlign': 'center'}),
+                                            dbc.Label(f'Relative Move ({obj.unit})', style={'textAlign': 'center'}),
                                             dbc.Row([
                                                 dbc.Col(
                                                     dbc.Button(id={'base': obj.id, 'type': 'target-left'}, 
@@ -195,9 +222,9 @@ def create_control_gui(obj:'OphydDash'):
                                                                 disabled=not(obj.status)),),
                                                 dbc.Col(
                                                     dcc.Input(id={'base': obj.id, 'type': 'target-step'}, 
-                                                                min=obj.min,
-                                                                max=obj.max,
-                                                                step=0.01,
+                                                                # min=obj.min,
+                                                                # max=obj.max,
+                                                                # step=0.01,
                                                                 value=1, 
                                                                 type='number',
                                                                 disabled=not(obj.status),
@@ -212,10 +239,32 @@ def create_control_gui(obj:'OphydDash'):
                                             # Cache variable to keep track of the target value when a new
                                             # movement is requested before the previous one has completed
                                             dcc.Store(id={'base': obj.id, 'type': 'target-value'},
-                                                        data=obj.position if np.isnan(obj.position) else obj.ophyd_object.position)
+                                                        data=obj.position if np.isnan(obj.position) else obj.ophydObj.position)
                                         ])
                                     ])
                                 ])
                             ])
                     ]
 
+
+
+# def create_camera_gui(obj:'OphydDash'):
+#     '''
+#     Creates the GUI components for the camera signal
+#     '''
+#     status_value = obj.status == 'Online'
+#     header = obj.create_header()
+#     obj.gui_comp = [dbc.Card(id={'base': obj.id, 'type': 'control'},
+#                                 children=[
+#                                 dbc.CardHeader(header),
+#                                 dbc.CardBody([
+#                                     # Current position display
+#                                     dbc.Row(
+#                                         [dbc.Col(dbc.Label('Current Reading:', style={'textAlign': 'right'})),
+#                                             dbc.Col(html.P(id={'base': obj.id, 'type': 'current-pos'}, 
+#                                                         children=f'{current_reading}{obj.units}', 
+#                                                         style={'textAlign': 'left'}))],
+#                                     )
+#                                 ])
+#                             ])
+#                     ]

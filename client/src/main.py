@@ -8,7 +8,7 @@ import plotly.express as px
 import pvaccess as pva
 
 from src.app_layout import app, COMPONENT_LIST
-from src.helper_utils import Scan, ComponentType, add2table_remove_from_dropdown, add2dropdown
+from src.helper_utils import ComponentType, add2table_remove_from_dropdown, add2dropdown
 from src.pva.pvaMonitor import pvaMonitor
 
 
@@ -115,34 +115,13 @@ def plot_live_scaler(refresh_interval, data, x_component, y_component):
         data = None
         print('data initilization')
         return px.scatter(), None
-    
-    fig = px.scatter(x=data['xval'],y=data['yval'])
-    fig.update_layout(
-    xaxis_title="%s (%s)"%(x_component, data['xunit']),
-    yaxis_title="%s (%s)"%(y_component, data['yunit']))
-
-    return fig, data
-
-@app.callback(
-    Output({'base': ALL, 'type': 'current-pos'}, 'children'),
-    Input('refresh-interval', 'n_intervals'),
-)
-def update(refresh_interval):
-    '''
-    This callback reads and updates the position of all the components
-    Args:
-        refresh_interval:   Time interval between updates
-        
-    Output:
-        current reading of all the components
-    '''
-    comp_list = COMPONENT_LIST.comp_list
-    
+    response_list = []
+    # fig = px.scatter(x=data['xval'happi_dict[
     # Update component status
-    for c in comp_list: c.update_status()
+    # for c in comp_list: c.update_status()
 
-    # Get current position
-    response_list = ['%.2f %s'%(c.position,c.unit) for c in comp_list]
+    # # Get current position
+    # response_list = ['%.2f %s'%(c.position,c.unit) for c in comp_list]
     
     return response_list
 
@@ -296,56 +275,56 @@ def start_scan(scan_go, scan_table, scan_number):
     return 'scanning'
 
 
-@app.callback(
-    Output('scan-img', 'figure'),
-    Output('scan-output', 'columns'),
-    Output('scan-output', 'data'),
+# @app.callback(
+#     Output('scan-img', 'figure'),
+#     Output('scan-output', 'columns'),
+#     Output('scan-output', 'data'),
 
-    Input('scan-go', 'n_clicks'),
-    Input('scan-abort', 'n_clicks'),
-    Input('refresh-interval', 'n_intervals'),
+#     Input('scan-go', 'n_clicks'),
+#     Input('scan-abort', 'n_clicks'),
+#     Input('refresh-interval', 'n_intervals'),
 
-    State('scan-cache', 'data'),
-    prevent_initial_call=True
-)
-def manage_running_scan(scan_go, scan_abort, n_int, status):
-    '''
-    This callback starts a scan
-    Args:
-        scan_abort:     Abort button to stop a scan
-        scan_cache:     Scan object
-    Return:
-        scan_output:    Scan output
-    '''
-    changed_id = dash.callback_context.triggered[0]['prop_id']
-    results = dash.no_update
-    columns = dash.no_update
-    fig = dash.no_update
-    if 'scan-abort' in changed_id:
-        print('Abort')
-        # RE.abort()
-    else:
-        try:
-            results = '' #DB[-1].table() --> read from databroker
-            x = None
-            y = None
-            valid_columns = []
-            for col in list(results.columns):
-                comp = COMPONENT_LIST.find_component(name=col)
-                if comp:
-                    valid_columns.append(col)
-                    if comp.type == ComponentType('control'):
-                        x = col
-                    elif comp.type == ComponentType('detector'):
-                        y = col
-            columns = [{'name': column, 'id': column} for column in list(valid_columns)]
-            if x and y:
-                fig = px.line(results, x=x, y=y)
-                fig.update_layout( margin=dict(l=20, r=20, t=20, b=20))
-            results = results.to_dict('records')
-        except Exception as e:
-            print(f'plot failed due to: {e}')
-    return fig, columns, results
+#     State('scan-cache', 'data'),
+#     prevent_initial_call=True
+# )
+# def manage_running_scan(scan_go, scan_abort, n_int, status):
+#     '''
+#     This callback starts a scan
+#     Args:
+#         scan_abort:     Abort button to stop a scan
+#         scan_cache:     Scan object
+#     Return:
+#         scan_output:    Scan output
+#     '''
+#     changed_id = dash.callback_context.triggered[0]['prop_id']
+#     results = dash.no_update
+#     columns = dash.no_update
+#     fig = dash.no_update
+#     if 'scan-abort' in changed_id:
+#         print('Abort')
+#         # RE.abort()
+#     else:
+#         try:
+#             results = '' #DB[-1].table() --> read from databroker
+#             x = None
+#             y = None
+#             valid_columns = []
+#             for col in list(results.columns):
+#                 comp = COMPONENT_LIST.find_component(name=col)
+#                 if comp:
+#                     valid_columns.append(col)
+#                     if comp.type == ComponentType('control'):
+#                         x = col
+#                     elif comp.type == ComponentType('detector'):
+#                         y = col
+#             columns = [{'name': column, 'id': column} for column in list(valid_columns)]
+#             if x and y:
+#                 fig = px.line(results, x=x, y=y)
+#                 fig.update_layout( margin=dict(l=20, r=20, t=20, b=20))
+#             results = results.to_dict('records')
+#         except Exception as e:
+#             print(f'plot failed due to: {e}')
+#     return fig, columns, results
 
 
 

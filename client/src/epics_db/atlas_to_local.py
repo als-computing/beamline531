@@ -17,7 +17,10 @@ for elem in db_dict.keys():
     else:
         comp['prefix'] = 'not assigned'
     comp['active'] = bool(sub_elem['active'])
+    comp['functional_group'] = sub_elem['functional_group']
+    comp['type'] = sub_elem['type']
     comp['device_class'] = sub_elem['device_class']
+    comp['args'] = sub_elem['args']
     if sub_elem['documentation'] is not None:
         comp['documentation'] = sub_elem['documentation']
     if sub_elem['unit'] is not None:
@@ -30,7 +33,7 @@ for elem in db_dict.keys():
 
 beamline={'name': '5.3.1', 'components': comp_list}
 
-status = requests.post('http://localhost:8090/api/v0/beamline', json=beamline,
+status = requests.post('http://beamline_api:8090/api/v0/beamline', json=beamline,
                        headers={'api_key': BL_API_KEY})
 
-print(status)
+print(status.json())

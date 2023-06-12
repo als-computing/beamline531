@@ -53,7 +53,7 @@ def get_ophyd_dash_items(mongo_config_path = None, json_path = None, \
             ## Mongo to happi dict
             happi_dict = {}
             for elem in raw_json:
-                happi_dict[elem['name']]: elem
+                happi_dict[elem['name']] = elem
             client = RawJSONClient(raw_json=happi_dict)
         else:
             client = happi.Client(path=DEFAULT_EPICS_DB)
