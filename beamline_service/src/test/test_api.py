@@ -67,6 +67,9 @@ component1 = {
     "prefix": "prefix",
     "active": False,
     "device_class": "ophyd.EpicsMotor",
+    "functional_group": "prefix",
+    "type": "OphydItem", 
+    "args": "{{prefix}}"
     }
 
 
@@ -75,6 +78,9 @@ component2 = {
     "prefix": "prefix",
     "active": True,
     "device_class": "ophyd.EpicsMotor",
+    "functional_group": "prefix",
+    "type": "OphydItem", 
+    "args": "{{prefix}}"
     }
 
 

@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Extra, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 
 SCHEMA_VERSION = "0.1"
@@ -31,14 +31,16 @@ class BeamlineComponent(BaseModel):
     name: str = Field(description="epics name")
     prefix: str = Field(description="epics prefix")
     active: bool = Field(description="the component is active")
+    functional_group: str
+    type: str
     device_class: DeviceType
     documentation: Optional[str]
-    kwargs: Optional[Dict]
     creation: datetime = DEFAULT_TIME
     last_edit: datetime = DEFAULT_TIME
     unit: Optional[str] = Field(description="unit")
     z: Optional[float] = Field(description="")
     port: Optional[str] = Field(description="port connection")
+    args: Optional[Any]    
 
 
 class Beamline(BaseModel):
