@@ -8,7 +8,7 @@ dash_html_components==2.0.0
 dash_table==5.0.0
 dash-daq==0.5.0
 # databroker==1.2.5
-flask==2.2.4
+flask>=2.2.5
 happi==2.0.0
 imageio==2.9.0
 kaleido
@@ -23,5 +23,5 @@ pydantic==1.8.2
 pyepics==3.5.1
 pymongo==3.12.0
 # scikit_image==0.18.3
-requests==2.26.0
+requests>=2.31.0
 # Werkzeug>=2.2.3
