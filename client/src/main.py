@@ -63,7 +63,6 @@ def move(target_go=None, target_left=None, target_right=None,
     return msg, None, None, None
     
 
-
 @app.callback(
     Output('scalerPlot', 'figure'),
     Output('livescaler-cache', 'data'),
@@ -73,7 +72,7 @@ def move(target_go=None, target_left=None, target_right=None,
     Input('scaler-x', 'value'),
     Input('scaler-y', 'value'),
 )
-def plot_live_scaler(refresh_interval, data, x_component, y_component):
+def plotLiveScaler(refresh_interval, data, x_component, y_component):
     '''
     This callback reads and plot the selected scaler
     Args:
@@ -87,6 +86,7 @@ def plot_live_scaler(refresh_interval, data, x_component, y_component):
         px.Scatter, updated scattered figure
         dcc.Store,  update the store in cache
     '''
+    
     xobj = x_component if x_component =='Time' else COMPONENT_LIST.find_component(x_component)
     yobj = y_component if y_component =='Time' else COMPONENT_LIST.find_component(y_component)    
     
@@ -115,13 +115,35 @@ def plot_live_scaler(refresh_interval, data, x_component, y_component):
         data = None
         print('data initilization')
         return px.scatter(), None
-    response_list = []
-    # fig = px.scatter(x=data['xval'happi_dict[
-    # Update component status
-    # for c in comp_list: c.update_status()
+    
+    fig = px.scatter(x=data['xval'],y=data['yval'])
+    fig.update_layout(
+    xaxis_title="%s (%s)"%(x_component, data['xunit']),
+    yaxis_title="%s (%s)"%(y_component, data['yunit']))
 
-    # # Get current position
-    # response_list = ['%.2f %s'%(c.position,c.unit) for c in comp_list]
+    return fig, data
+
+
+@app.callback(
+    Output({'base': ALL, 'type': 'current-pos'}, 'children'),
+    Input('refresh-interval', 'n_intervals'),
+)
+def update(refresh_interval):
+    '''
+    This callback reads and updates the position of all the components
+    Args:
+        refresh_interval:   Time interval between updates
+        
+    Output:
+        current reading of all the components
+    '''
+    comp_list = COMPONENT_LIST.comp_list
+    
+    # Update component status
+    for c in comp_list: c.update_status()
+
+    # Get current position
+    response_list = ['%.2f %s'%(c.position,c.unit) for c in comp_list]
     
     return response_list
 
