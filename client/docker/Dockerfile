@@ -3,7 +3,7 @@ MAINTAINER ALS
 COPY docker/requirements.txt requirements.txt
 
 RUN apt update
-RUN apt install -y python3-pip
+RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 WORKDIR /app/work

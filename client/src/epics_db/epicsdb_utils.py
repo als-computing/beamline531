@@ -1,62 +1,74 @@
-
-import dash, json, pymongo, happi
-from dash import html, dcc, Input, Output, State, dash_table
-import plotly.express as px
-import pandas as pd
-from pymongo.errors import ConnectionFailure
 from bson.objectid import ObjectId
 import bson.json_util as json_util
+import logging
 from datetime import datetime
+import json
+
+import dash
+from dash import html, dcc, Input, Output, State, dash_table
+import happi
 from happi.backends.mongo_db import MongoBackend
-from beamline_service.epicsDB.OphydDash import OphydDash
+import pandas as pd
+import plotly.express as px
+import pymongo
+from pymongo.errors import ConnectionFailure
+
+from src.epics_db.ophyd_dash import OphydDash
+from src.epics_db.model import RawJSONClient
+
+
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
 DEFAULT_EPICS_DB = './beamline_service/epicsDB/epicsHappi_DB.json'
 
-def getListOphydDashItems(mongoConfig_path = None, json_path = None):
+
+def get_ophyd_dash_items(mongo_config_path = None, json_path = None, \
+                         raw_json = None):
     """
-    Get list of ophydDash items. If mongoConfig_path is given, it will 
-    attempt to save the collection in JSON file. If mongoConfig_path is
+    Get list of OphydDash items. If mongo_config_path is given, it will 
+    attempt to save the collection in JSON file. If mongo_config_path is
     not given but json_path is defined, this JSON file will be loaded
-    using Happi.Client JSON backend.
+    using Happi Client JSON backend. If raw_json is defined, the custom
+    RawJSONClient will be used to load the components from the db.
 
     Parameters
     ----------
-    mongoConfig_path : str, optional
+    mongo_config_path : str, optional
         path of mongo configuration file
     json_path : str, optional
         path of a JSON EPICs PV collection
-    
+    raw_json : str, optional
+        raw JSON db content
     Returns
       ------
-      list, list of ophyddash object 
+      list, list of OphydDash object 
     
     """
-    if mongoConfig_path is not None:
-        config_dic = getConfigs(fpath_config=mongoConfig_path)
-        fname = saveCollectionToJson(config_dic=config_dic)
-    elif json_path is not None:
-        fname = json_path
-    else:
-        fname = DEFAULT_EPICS_DB
-    
     try:
-        client = happi.Client(path=fname)
+        if mongo_config_path is not None:
+            client = happi_client_mongo_db(mongo_config_path)
+        elif json_path is not None:
+            client = happi.Client(path=json_path)
+        elif raw_json is not None:
+            ## Mongo to happi dict
+            happi_dict = {}
+            for elem in raw_json:
+                happi_dict[elem['name']] = elem
+            client = RawJSONClient(raw_json=happi_dict)
+        else:
+            client = happi.Client(path=DEFAULT_EPICS_DB)
         itemlist = client.all_items
         ophydash_list = [OphydDash(l) for l in itemlist]
         return ophydash_list
     except Exception as e:
-        print('Could not get the item list due to %s'%e)
-    # if mongoConfig_path is None:
-    #     mongoConfig_path = '/home/bl531/bl531_gui/beamline531_gyl/beamline_service/epicsDB/config_test.json'
-
-    # client = happiClientMongoDB(mongoConfig_path)
-    # itemlist = client.all_items
+        logging.error('Could not get the item list due to %s'%e)
+    pass
 
 
-
-def saveCollectionToJson(config_dic:'dict', fname:'str'=None):
-    clientpath = getClientPath(input_dic=config_dic)
-    collection = getCollection(clientpath, dbName=config_dic['db'], collectionName=config_dic['collection'])
+def save_collection_to_json(config_dic:'dict', fname:'str'=None):
+    client_path = get_client_path(input_dic=config_dic)
+    collection = get_collection(client_path, db_name=config_dic['db'], \
+                                collection_name=config_dic['collection'])
     df = pd.DataFrame(list(collection.find()))
     dflist = df.to_dict('records')
     json_dic = {d['name']:d for d in dflist}
@@ -68,81 +80,93 @@ def saveCollectionToJson(config_dic:'dict', fname:'str'=None):
         f.write(json_util.dumps(json_dic))
     return fname
 
-def happiClientMongoDB(mongoConfig_path: 'str'):
-    mongoConfig = getConfigs(mongoConfig_path)
-    mg = MongoBackend(host=mongoConfig['host'], user=mongoConfig['user'], pw=mongoConfig['pw'], 
-                    db=mongoConfig['db'], collection=mongoConfig['collection'])
+
+def happi_client_mongo_db(mongo_config_path: 'str'):
+    mongo_config = get_configs(mongo_config_path)
+    mg = MongoBackend(host=mongo_config['host'], user=mongo_config['user'], \
+                      pw=mongo_config['pw'], 
+                    db=mongo_config['db'], collection=mongo_config['collection'])
     client = happi.Client(mg)
     return client
 
-def getClientPath(input_dic = None, fpath_config = None):
-    assert (any([input_dic is not None, fpath_config is not None])), "Require either input_dict or fpath_config"
+
+def get_client_path(input_dic = None, fpath_config = None):
+    assert (any([input_dic is not None, fpath_config is not None])), \
+        "Require either input_dict or fpath_config"
     if input_dic is None:
-        print('Loading inputs from JSON config file: %s'%fpath_config)
+        logging.info('Loading inputs from JSON config file: %s'%fpath_config)
         with open(fpath_config, 'r') as d:
             input_dic = json.load(d)
-    clientlink = "mongodb+srv://%s:%s@%s"%(input_dic['user'], input_dic['pw'], input_dic['host'])
+    clientlink = "mongodb+srv://%s:%s@%s"%(input_dic['user'], input_dic['pw'], \
+                                           input_dic['host'])
     return clientlink
 
-def getConfigs(fpath_config):
+
+def get_configs(fpath_config):
     with open(fpath_config, 'r') as d:
         inputs = json.load(d)
     return inputs
 
-def connectMongo(clientPath):
+
+def connect_mongo(client_path):
     client = None
     try:
-        client = pymongo.MongoClient(clientPath)
+        client = pymongo.MongoClient(client_path)
     except ConnectionFailure as e:
-        print('Cannot connect to Mongo' + e)
+        logging.error('Cannot connect to Mongo' + e)
     return client
 
-def getCollection(clientPath, dbName, collectionName):
+
+def get_collection(client_path, db_name, collection_name):
     try:
-        client = connectMongo(clientPath)
-        collection = client.get_database(dbName).get_collection(collectionName)
+        client = connect_mongo(client_path)
+        collection = client.get_database(db_name).get_collection(collection_name)
         return collection
-    except:
-        print('Having issue connecting to MongoDB server')
+    except Exception as e:
+        logging.error(f'Having issue connecting to MongoDB server. Error: {e}')
+    pass
+
 
 # push a list of entry into MongoDB
-def pushData_list(clientPath, dbName, collectionName, pvlist):
-    client = connectMongo(clientPath)
-    collection = client.get_database(dbName).get_collection(collectionName)
-    for v in pvlist:
+def push_data_list(client_path, db_name, collection_name, pv_list):
+    client = connect_mongo(client_path)
+    collection = client.get_database(db_name).get_collection(collection_name)
+    for v in pv_list:
         try:
             v.pop('_id')
             v.pop('kwargs')
-        except:
-            print('No such fields')
-
+        except Exception as e:
+            logging.error(f'No such fields {e}')
         id = collection.insert_one(v)
-        print('Uploading %s'%(v['name']))
+        logging.info('Uploading %s'%(v['name']))
+    pass
+
 
 # push dictionary into MongoDB
-def pushData_dict(clientPath, dbName, collectionName, pvlist):
-    client = connectMongo(clientPath)
-    collection = client.get_database(dbName).get_collection(collectionName)
-    for _,v in pvlist.items():
+def push_data_dict(client_path, db_name, collection_name, pv_list):
+    client = connect_mongo(client_path)
+    collection = client.get_database(db_name).get_collection(collection_name)
+    for _,v in pv_list.items():
         try:
             del v['kwargs']
             del v['_id']
-        except:
-            print('No such fields')
-
+        except Exception as e:
+            logging.error(f'No such fields {e}')
         id = collection.insert_one(v)
-        print('Uploading %s'%(v['name']))
+        logging.info('Uploading %s'%(v['name']))
+    pass
+
 
 # get the latest database from cloud
-def getDB(clientPath, dbName, collectionName):
-    client = connectMongo(clientPath)
-    collection = client.get_database(dbName).get_collection(collectionName)
+def get_db(client_path, db_name, collection_name):
+    client = connect_mongo(client_path)
+    collection = client.get_database(db_name).get_collection(collection_name)
     df = pd.DataFrame(list(collection.find()))
     return df
 
 
 # create dash app interface
-def create_dbApp(collection):
+def create_db_app(collection):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
                     suppress_callback_exceptions=True)

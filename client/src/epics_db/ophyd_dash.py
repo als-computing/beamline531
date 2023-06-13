@@ -5,21 +5,22 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 import numpy as np
-# %%
+
+
 class OphydDash():
     _highLimit = 1
     _lowLimit = -1
 
-    def __init__(self, ophydItem):
-        # self.name = ophydItem.name
-        self.name = ophydItem.extraneous['functional_group']
-        self.type = ophydItem.device_class
-        self.prefix = ophydItem.prefix
-        self.id = ophydItem.extraneous['functional_group']
-        self.ophydItem = ophydItem
+    def __init__(self, ophyd_item):
+        # self.name = ophyd_item.name
+        self.name = ophyd_item.extraneous['functional_group']
+        self.type = ophyd_item.device_class
+        self.prefix = ophyd_item.prefix
+        self.id = ophyd_item.extraneous['functional_group']
+        self.ophyd_item = ophyd_item
         self.status = 'Offline'
 
-        self.ophydObj = None
+        self.ophyd_obj = None
         self.gui_comp = None
         self.precision = 5
 
@@ -30,10 +31,10 @@ class OphydDash():
 
     def connect(self):
         try:
-            self.ophydObj = from_container(self.ophydItem, attach_md=True)
+            self.ophyd_obj = from_container(self.ophyd_item, attach_md=True)
             # self.ophyObj.wait_for_connection(timeout=0.2)
             time.sleep(0.2)
-            self.update_status
+            # self.update_status
         except Exception as e:
             logging.error(f'Could not connect component {self.name} due to: {e}')
 
@@ -46,10 +47,10 @@ class OphydDash():
         settleTime : float, optional
             Settling time of motor, default value is 0.05 second
         """
-        if self.ophydObj is not None:
-            if self.ophydObj.connected:
+        if self.ophyd_obj is not None:
+            if self.ophyd_obj.connected:
                 try:
-                    self.ophydObj.settle_time = settleTime
+                    self.ophyd_obj.settle_time = settleTime
                 except Exception as e:
                     logging.error(f'Could not connect component {self.name} due to: {e}')
             else:
@@ -60,28 +61,28 @@ class OphydDash():
         Update motor status
 
         """
-        self.status = 'Online' if self.ophydObj.connected else 'Offline'
+        self.status = 'Online' if self.ophyd_obj.connected else 'Offline'
         if self.type == 'ophyd.EpicsMotor':
             self._update_motor()
         elif self.type == 'ophyd.EpicsSignal':
             self._update_signal()
 
     def _update_motor(self):
-        if self.ophydObj is not None:
-            self.unit = self.ophydObj.egu if self.ophydObj.connected else 'None'
-            self.min = self.ophydObj.get_lim(self._lowLimit) if self.ophydObj.connected else 0
-            self.max = self.ophydObj.get_lim(self._highLimit) if self.ophydObj.connected else 0
-            self.position = self.ophydObj.position if self.ophydObj.connected else np.nan
+        if self.ophyd_obj is not None:
+            self.unit = self.ophyd_obj.egu if self.ophyd_obj.connected else 'None'
+            self.min = self.ophyd_obj.get_lim(self._lowLimit) if self.ophyd_obj.connected else 0
+            self.max = self.ophyd_obj.get_lim(self._highLimit) if self.ophyd_obj.connected else 0
+            self.position = self.ophyd_obj.position if self.ophyd_obj.connected else np.nan
 
     def _update_signal(self):
-        if self.ophydObj is not None:
-            metadata = self.ophydObj.metadata
-            self.unit = metadata['units'] if self.ophydObj.connected else 'None'
-            self.min = metadata['lower_ctrl_limit'] if self.ophydObj.connected else 0
-            self.max = metadata['upper_ctrl_limit'] if self.ophydObj.connected else 0
+        if self.ophyd_obj is not None:
+            metadata = self.ophyd_obj.metadata
+            self.unit = metadata['units'] if self.ophyd_obj.connected else 'None'
+            self.min = metadata['lower_ctrl_limit'] if self.ophyd_obj.connected else 0
+            self.max = metadata['upper_ctrl_limit'] if self.ophyd_obj.connected else 0
             try:
-                metadata = self.ophydObj.read()
-                self.position = metadata[self.ophydItem.name]['value']
+                metadata = self.ophyd_obj.read()
+                self.position = metadata[self.ophyd_item.name]['value']
             except Exception as e:
                 self.position = np.nan
                 logging.error(f'Could not read component {self.name} due to: {e}')
@@ -96,7 +97,7 @@ class OphydDash():
         """
         Getting current position 
         """
-        if self.ophydObj.connected:
+        if self.ophyd_obj.connected:
             try:
                 self.update_status()
                 return self.position
@@ -114,11 +115,11 @@ class OphydDash():
         target_position : float, required
             Target motor position
         """
-        if all([self.ophydObj.connected,
+        if all([self.ophyd_obj.connected,
                 target_position > self.min,
                 target_position < self.max]):
             try:
-                self.ophydObj.move(target_position)
+                self.ophyd_obj.move(target_position)
             except Exception as e:
                 logging.error(f'Could not move component {self.name} due to: {e}')
         else:
@@ -187,7 +188,7 @@ def create_control_gui(obj:'OphydDash'):
                                     dbc.Row(
                                         [dbc.Col(dbc.Label('Current Position:', style={'textAlign': 'right'})),
                                             dbc.Col(html.P(id={'base': obj.id, 'type': 'current-pos'}, 
-                                                        children=f'{obj.position if np.isnan(obj.position) else obj.ophydObj.position} {obj.unit}', 
+                                                        children=f'{obj.position if np.isnan(obj.position) else obj.ophyd_obj.position} {obj.unit}', 
                                                         style={'textAlign': 'left'}))],
                                     ),
                                     dbc.Row([
@@ -238,7 +239,7 @@ def create_control_gui(obj:'OphydDash'):
                                             # Cache variable to keep track of the target value when a new
                                             # movement is requested before the previous one has completed
                                             dcc.Store(id={'base': obj.id, 'type': 'target-value'},
-                                                        data=obj.position if np.isnan(obj.position) else obj.ophydObj.position)
+                                                        data=obj.position if np.isnan(obj.position) else obj.ophyd_obj.position)
                                         ])
                                     ])
                                 ])
