@@ -5,8 +5,8 @@ import requests
 
 BL_API_KEY = str(os.environ.get('BL_API_KEY'))
 
-f = open('epics_happi_db.json')
-db_dict = json.load(f)
+with open('epics_happi_db.json') as f:
+    db_dict = json.load(f)
 comp_list = []
 for elem in db_dict.keys():
     sub_elem = db_dict[elem]

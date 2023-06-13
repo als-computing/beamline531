@@ -24,9 +24,7 @@ def init_logging():
     logger.setLevel(COMP_LOG_LEVEL)
 
 
-MONGO_DB_USERNAME = str(os.environ.get('MONGO_INITDB_ROOT_USERNAME', default=""))
-MONGO_DB_PASSWORD = str(os.environ.get('MONGO_INITDB_ROOT_PASSWORD', default=""))
-MONGO_DB_URI = "mongodb://%s:%s@mongodb_bl531:27017/?authSource=admin" % (MONGO_DB_USERNAME, MONGO_DB_PASSWORD)
+MONGO_DB_URI = str(os.environ.get('MONGO_DB_URI', default="mongodb://mongodb_bl531:27017"))
 MONGO_DB_NAME = "beamline"
 COMP_LOG_LEVEL = "INFO"
 API_URL_PREFIX = "/api/v0"

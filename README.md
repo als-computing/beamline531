@@ -15,7 +15,14 @@ $ cd beamline321
 
 Optional step, create a docker network "qs_net" with access to the devices in this beamline, by using [IPvlan](https://docs.docker.com/network/drivers/ipvlan/). If this network is not defined, please comment out this network in the docker-compose.yml file in this repo before moving forward.
 
-Create an '.env' file, where you will define 'MONGO_INITDB_ROOT_USERNAME = YOUR_USERNAME' and 'MONGO_INITDB_ROOT_PASSWORD = YOUR_PASSWORD'
+Create an '.env' file, where you will define 
+```
+MONGO_INITDB_ROOT_USERNAME = YOUR_USERNAME
+MONGO_INITDB_ROOT_PASSWORD = YOUR_PASSWORD
+MONGO_DB_URI = YOUR_MONGO_DB_URI
+```
+
+In command line, run the following commands:
 
 ```
 $ docker compose build
