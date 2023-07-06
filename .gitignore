@@ -1,5 +1,5 @@
-# Project
-env_bl
+# MongoDB
+database/*
 
 # MacOS
 **.DS_Store

@@ -1,0 +1,70 @@
+version: '3.7'
+
+services:
+
+  mongo:
+    image: mongo:4.4
+    restart: always
+    container_name: "mongodb_bl531"
+    working_dir: "/database/"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: '${MONGO_INITDB_ROOT_USERNAME}'
+      MONGO_INITDB_ROOT_PASSWORD: '${MONGO_INITDB_ROOT_PASSWORD}'
+    volumes:
+      - "./database/:/data/db"
+    networks:
+      - bl_service
+  
+  beamline_api:
+    build:
+      context: 'beamline_service'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/main.py'
+    environment:
+      MONGO_DB_URI: '${MONGO_DB_URI}'
+    depends_on:
+      - mongo
+    ports:
+      - 8090:8090
+    networks:
+      - bl_service
+
+  manager_frontend:
+    build:
+      context: 'client'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/epics_db/launch_web_db.py'
+    environment:
+      BL_API_URL: 'http://beamline_api:8090/api/v0'
+      BL_API_KEY: '${BL_API_KEY}'
+      BL_UID: '${BL_UID}'
+    ports:
+      - '8050:8050'
+    depends_on:
+      - beamline_api
+    networks:
+      - bl_service
+  
+  client_frontend:
+    build:
+      context: 'client'
+      dockerfile: 'docker/Dockerfile'
+    command: 'python src/main.py'
+    environment:
+      BL_API_URL: 'http://beamline_api:8090/api/v0'
+      BL_API_KEY: '${BL_API_KEY}'
+      BL_UID: '${BL_UID}'
+    ports:
+      - '8052:8052'
+    depends_on:
+      - beamline_api
+    networks:
+      bl_service:
+      qs_net:
+        ipv4_address: 192.168.10.153
+  
+networks: 
+  bl_service:
+    name: "bl_service"
+  qs_net:
+    external: true
