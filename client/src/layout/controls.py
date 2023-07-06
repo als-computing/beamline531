@@ -10,6 +10,44 @@ def get_controls_layout(component_gui):
     return bl_input
 
 
+def create_sensor_gui(obj: "OphydDash"):
+    """
+    Creates the GUI components for the sensor
+    """
+    obj.update_status()
+    header = component_header(obj)
+    current_reading = obj.position
+    obj.gui_comp = [
+        dbc.Card(
+            id={"base": obj.id, "type": "control"},
+            children=[
+                dbc.CardHeader(header),
+                dbc.CardBody(
+                    [
+                        # Current position display
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    dbc.Label(
+                                        "Current Reading:", style={"textAlign": "right"}
+                                    )
+                                ),
+                                dbc.Col(
+                                    html.P(
+                                        id={"base": obj.id, "type": "current-pos"},
+                                        children=f"{current_reading}{obj.unit}",
+                                        style={"textAlign": "left"},
+                                    )
+                                ),
+                            ],
+                        )
+                    ]
+                ),
+            ],
+        )
+    ]
+
+
 def create_control_gui(obj: "OphydDash"):
     """
     Creates the GUI components for control
