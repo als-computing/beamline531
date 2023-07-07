@@ -8,7 +8,7 @@ dash_html_components==2.0.0
 dash_table==5.0.0
 dash-daq==0.5.0
 # databroker==1.2.5
-flask>=2.2.5
+flask==2.2.4
 happi==2.0.0
 imageio==2.9.0
 kaleido
