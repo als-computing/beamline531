@@ -4,7 +4,7 @@ from dash import html, dcc
 import dash_bootstrap_components as dbc
 import dash_daq as daq
 import numpy as np
-from client.src.layout.controls import create_control_gui, create_sensor_gui
+from src.layout.controls import create_control_gui, create_sensor_gui
 
 
 class OphydDash:

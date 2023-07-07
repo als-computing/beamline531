@@ -38,7 +38,7 @@ def move_callback(app, component_list):
         """
         component_name = target_id["base"]
         component_ophyd = component_list.find_component(component_name)
-        current_pos = component_ophyd.ophydObj.position
+        current_pos = component_ophyd.ophyd_obj.position
         if target_go:
             target_pos = target_absolute
         else:

@@ -4,18 +4,20 @@ from callback.move import move_callback
 from callback.read import read_callback
 from callback.scaler import plot_scaler
 import dash_bootstrap_components as dbc
-import sys, os
+import sys, os, requests
 
-sys.path.append("/home/bl531/bl531_gui/beamline531_gyl")
-from beamline_service.epicsDB.epicsdb_utils import getListOphydDashItems
-from helper_utils import BeamlineComponents
+#sys.path.append("/home/bl531/bl531_gui/beamline531_gyl")
+#from beamline_service.epicsDB.epicsdb_utils import getListOphydDashItems
+from model import BeamlineComponents
+from src.epics_db.epicsdb_utils import get_ophyd_dash_items
 
 
 def get_beamline_components(BL_API_URL, BL_API_KEY, BL_UID):
     # Get beamline PVs from MongoDB as OphydDash object
-    response = requests.get(
-        f"{BL_API_URL}/beamline/{BL_UID}/components", headers={"api_key": BL_API_KEY}
-    )
+    url = f"{BL_API_URL}/beamline/{BL_UID}/components"
+    print(url)
+    response = requests.get(url, headers={"api_key": BL_API_KEY})
+    print(response)
     if response.status_code != 200:
         raise BeamlineComponentsNotFound(f"Status code: {response.status_code}")
     ophyd_items = get_ophyd_dash_items(raw_json=response.json())
@@ -47,8 +49,9 @@ class bl531App:
         self.setup_app(title=title, favicon=favicon)
 
         # Get beamline components
-        # self.component_list = self.get_beamline_components(self.BL_API_URL, self.BL_API_KEY, self.BL_UID)
-        self.component_list = get_beamline_components_json()
+        self.component_list = get_beamline_components(self.BL_API_URL, self.BL_API_KEY, self.BL_UID)
+        print(self.component_list)
+        #self.component_list = get_beamline_components_json()
         self.component_gui = self.component_list.get_gui()
 
         # Dropdown options for live scalers
@@ -101,4 +104,4 @@ class bl531App:
 
 if __name__ == "__main__":
     bl531_gui = bl531App()
-    bl531_gui.app.run_server(debug=True, host="0.0.0.0", port="8053")
+    bl531_gui.app.run_server(debug=True, host="0.0.0.0", port="8052")

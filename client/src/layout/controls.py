@@ -75,7 +75,7 @@ def create_control_gui(obj: "OphydDash"):
                                 dbc.Col(
                                     html.P(
                                         id={"base": obj.id, "type": "current-pos"},
-                                        children=f"{obj.position if np.isnan(obj.position) else obj.ophydObj.position} {obj.unit}",
+                                        children=f"{obj.position if np.isnan(obj.position) else obj.ophyd_obj.position} {obj.unit}",
                                         style={"textAlign": "left"},
                                     )
                                 ),
@@ -187,7 +187,7 @@ def create_control_gui(obj: "OphydDash"):
                                             id={"base": obj.id, "type": "target-value"},
                                             data=obj.position
                                             if np.isnan(obj.position)
-                                            else obj.ophydObj.position,
+                                            else obj.ophyd_obj.position,
                                         ),
                                     ]
                                 ),
