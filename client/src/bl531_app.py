@@ -4,11 +4,8 @@ from callback.move import move_callback
 from callback.read import read_callback
 from callback.scaler import plot_scaler
 import dash_bootstrap_components as dbc
-import sys, os, requests
-
-#sys.path.append("/home/bl531/bl531_gui/beamline531_gyl")
-#from beamline_service.epicsDB.epicsdb_utils import getListOphydDashItems
-from model import BeamlineComponents
+import os, requests
+from model import BeamlineComponents, BeamlineComponentsNotFound
 from src.epics_db.epicsdb_utils import get_ophyd_dash_items
 
 
@@ -39,19 +36,15 @@ class bl531App:
     app = None
 
     def __init__(
-        self,
-        title="BL 5.3.1",
-        favicon="LBL_icon.ico",
-        # beamline="als_5_3_1",
-        # version="0",
+        self, title="BL 5.3.1", favicon="LBL_icon.ico",
     ):
         # Set up app
         self.setup_app(title=title, favicon=favicon)
 
         # Get beamline components
-        self.component_list = get_beamline_components(self.BL_API_URL, self.BL_API_KEY, self.BL_UID)
-        print(self.component_list)
-        #self.component_list = get_beamline_components_json()
+        self.component_list = get_beamline_components(
+            self.BL_API_URL, self.BL_API_KEY, self.BL_UID
+        )
         self.component_gui = self.component_list.get_gui()
 
         # Dropdown options for live scalers
@@ -82,11 +75,7 @@ class bl531App:
         self.app.layout = layout
 
     def setup_app(
-        self,
-        title="BL 5.3.1",
-        favicon="LBL_icon.ico",
-        # beamline="als_5_3_1",
-        # version="0",
+        self, title="BL 5.3.1", favicon="LBL_icon.ico",
     ):
         #### SETUP DASH APP ####
         external_stylesheets = [
@@ -97,9 +86,6 @@ class bl531App:
         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
         self.app.title = title
         self.app._favicon = favicon
-
-    # def run(self, port="8053", host="0,0,0,0"):
-    #     self.app.run_server(debug=True, host=host, port=port)
 
 
 if __name__ == "__main__":
