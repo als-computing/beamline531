@@ -38,6 +38,8 @@ services:
       BL_API_URL: 'http://beamline_api:8090/api/v0'
       BL_API_KEY: '${BL_API_KEY}'
       BL_UID: '${BL_UID}'
+    volumes:
+      - "./client/src:/app/work/src"
         #volumes:
         #  - "client:/app/work/client"
     ports:
@@ -48,6 +50,7 @@ services:
       - bl_service
   
   client_frontend:
+    restart: always
     build:
       context: 'client'
       dockerfile: 'docker/Dockerfile'
