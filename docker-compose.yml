@@ -65,7 +65,7 @@ services:
     networks:
       bl_service:
       qs_net:
-        ipv4_address: 192.168.10.153
+        ipv4_address: ${IP_ADDRESS}
   
 networks: 
   bl_service:
