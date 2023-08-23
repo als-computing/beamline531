@@ -1,5 +1,6 @@
 # MongoDB
 database/*
+**.json
 
 # MacOS
 **.DS_Store

@@ -13,6 +13,7 @@ assert os.path.exists(
 
 with open(json_path) as f:
     db_dict = json.load(f)
+    
 comp_list = []
 for elem in db_dict.keys():
     sub_elem = db_dict[elem]

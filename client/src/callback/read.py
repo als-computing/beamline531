@@ -21,9 +21,15 @@ def read_callback(app, component_list):
         for c in comp_list:
             c.update_status()
 
-        # Get current position
-        response_list = ["%.5f %s" % (c.position, c.unit) for c in comp_list]
-
+        response_list = []
+        # Get current position - temporaty patch
+        for c in comp_list:
+            try:
+                position = c.position
+                unit = c.unit
+                msg = "%.5f %s" % (position, unit)
+                response_list.append(msg) #= ["%.5f %s" % (c.position, c.unit) for c in comp_list]
+            except:
+                response_list
+            
         return response_list
-
-    return

@@ -3,18 +3,21 @@ from layout.app_layout import get_app_layout
 from callback.move import move_callback
 from callback.read import read_callback
 from callback.scaler import plot_scaler
+from callback.camera import camControl
+from callback.stream import camStream
 import dash_bootstrap_components as dbc
 import os, requests
 from model import BeamlineComponents, BeamlineComponentsNotFound
 from src.epics_db.epicsdb_utils import get_ophyd_dash_items
 
+from dash.dependencies import Input, Output, State
+from dash.dependencies import ClientsideFunction
+
 
 def get_beamline_components(BL_API_URL, BL_API_KEY, BL_UID):
     # Get beamline PVs from MongoDB as OphydDash object
     url = f"{BL_API_URL}/beamline/{BL_UID}/components"
-    print(url)
     response = requests.get(url, headers={"api_key": BL_API_KEY})
-    print(response)
     if response.status_code != 200:
         raise BeamlineComponentsNotFound(f"Status code: {response.status_code}")
     ophyd_items = get_ophyd_dash_items(raw_json=response.json())
@@ -25,8 +28,13 @@ def get_beamline_components(BL_API_URL, BL_API_KEY, BL_UID):
 def get_beamline_components_json(
     json_path="./beamline_service/epicsDB/epicsHappi_DB.json",
 ):
-    l = getListOphydDashItems(json_path=json_path)
+    l = get_ophyd_dash_items(json_path=json_path)
     return BeamlineComponents(l)
+
+
+def get_cam_json(json_path="./src/epics_db/epics_happi_cam.json"):
+    cam_ophyd = get_ophyd_dash_items(json_path=json_path)
+    return BeamlineComponents(cam_ophyd)
 
 
 class bl531App:
@@ -36,18 +44,27 @@ class bl531App:
     app = None
 
     def __init__(
-        self, title="BL 5.3.1", favicon="LBL_icon.ico",
+        self,
+        title="BL 5.3.1",
+        favicon="LBL_icon.ico",
     ):
         # Set up app
         self.setup_app(title=title, favicon=favicon)
 
         # Get beamline components
+        self.component_list = None
+        self.component_gui = None
         self.component_list = get_beamline_components(
             self.BL_API_URL, self.BL_API_KEY, self.BL_UID
         )
         self.component_gui = self.component_list.get_gui()
 
+        # Get beamline camera
+        self.cam_list = get_cam_json()
+        self.cam_pva = None  # Variable for storing the pvaMonitor() object
+
         # Dropdown options for live scalers
+        self.dropdown_scalers = None
         self.dropdown_scalers = ["Time"] + self.component_list.comp_id_list
 
         # Assign app layout
@@ -57,6 +74,8 @@ class bl531App:
         move_callback(self.app, self.component_list)
         read_callback(self.app, self.component_list)
         plot_scaler(self.app, self.component_list)
+        camControl(self.app, self.cam_list)
+        camStream(self.app, self.cam_pva)
 
     def assign_layout(
         self,
@@ -68,6 +87,7 @@ class bl531App:
             self.component_list,
             self.component_gui,
             self.dropdown_scalers,
+            self.cam_list,
             src_app_logo=src_app_logo,
             logo_height=logo_height,
             app_title=app_title,
@@ -75,7 +95,9 @@ class bl531App:
         self.app.layout = layout
 
     def setup_app(
-        self, title="BL 5.3.1", favicon="LBL_icon.ico",
+        self,
+        title="BL 5.3.1",
+        favicon="LBL_icon.ico",
     ):
         #### SETUP DASH APP ####
         external_stylesheets = [
@@ -86,6 +108,13 @@ class bl531App:
         self.app = Dash(__name__, external_stylesheets=external_stylesheets)
         self.app.title = title
         self.app._favicon = favicon
+
+        # ### SETUP CLIENT CALLBACK
+        # self.app.clientside_callback(
+        #     ClientsideFunction(namespace="clientside", function_name="update_graph"),
+        #     Output("stream-status", "value"),
+        #     Input("ws", "message"),
+        # )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from dash import html, dcc
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 import dash_daq as daq
 import numpy as np
 from layout.header import component_header

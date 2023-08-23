@@ -54,7 +54,7 @@ services:
     build:
       context: 'client'
       dockerfile: 'docker/Dockerfile'
-    command: 'python src/bl531_app.py'
+    command: 'python -u src/bl531_app.py'
     environment:
       BL_API_URL: 'http://beamline_api:8090/api/v0'
       BL_API_KEY: '${BL_API_KEY}'
@@ -68,8 +68,8 @@ services:
     networks:
       bl_service:
       qs_net:
-        ipv4_address: 192.168.10.153
-  
+        ipv4_address: ${IP_ADDRESS}
+    
 networks: 
   bl_service:
     name: "bl_service"

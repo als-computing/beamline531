@@ -2,10 +2,13 @@ from dash import html, dcc
 import plotly.express as px
 import numpy as np
 import dash_bootstrap_components as dbc
+from dash_extensions import WebSocket
 
 
-def get_cam_layout():
-    cam_trigger_mode = ["Continous", "Internal", "External"]
+def get_cam_layout(cam_list):
+    cam_name_list = cam_list.comp_id_list
+    cam_trigger_mode = ["Single", "Multiple", "Continous"]
+    url = None
     cam_layout = [
         dbc.CardHeader("Camera"),
         dbc.CardBody(
@@ -18,14 +21,19 @@ def get_cam_layout():
                                     dbc.InputGroup(
                                         [
                                             dbc.InputGroupText("Camera PV:"),
-                                            dbc.Input(
+                                            dcc.Dropdown(
                                                 id="cam-pv",
-                                                type="text",
-                                                placeholder="13PIL1",
+                                                options=[
+                                                    {"label": i, "value": i}
+                                                    for i in cam_name_list
+                                                ],
+                                                placeholder="Select camera or detector",
+                                                value=cam_name_list[0],
+                                                style={"width": "70%"},
                                             ),
                                         ],
                                         className="mb-3",
-                                    )
+                                    ),
                                 ),
                                 dbc.Row(
                                     [
@@ -47,15 +55,15 @@ def get_cam_layout():
                                         dbc.Col(
                                             dbc.InputGroup(
                                                 [
-                                                    dbc.InputGroupText("Trigger mode:"),
+                                                    dbc.InputGroupText("Image mode:"),
                                                     dcc.Dropdown(
-                                                        id="cam-trig",
+                                                        id="img-mode",
                                                         options=[
                                                             {"label": i, "value": i}
                                                             for i in cam_trigger_mode
                                                         ],
-                                                        # value=cam_trigger_mode[0],
-                                                        placeholder="Select camera trigger mode",
+                                                        placeholder="Select camera image mode",
+                                                        style={"width": "50%"},
                                                     ),
                                                 ],
                                                 className="mb-3",
@@ -104,6 +112,10 @@ def get_cam_layout():
                                                 className="mb-3",
                                             )
                                         ),
+                                    ]
+                                ),
+                                dbc.Row(
+                                    [
                                         dbc.Col(
                                             dbc.InputGroup(
                                                 [
@@ -155,6 +167,7 @@ def get_cam_layout():
                                                 disabled=True,
                                                 placeholder="ws://127.0.0.1:8000/ws/13PIL1",
                                             ),
+                                            html.Div([WebSocket(id="ws", url=url)])
                                         ],
                                         className="mb-3",
                                     )
@@ -163,8 +176,8 @@ def get_cam_layout():
                                     [
                                         dbc.Col(
                                             dbc.Button(
-                                                "Connect",
-                                                id="cam-link",
+                                                "Acquire",
+                                                id="cam-acquire",
                                                 color="light",
                                                 style={"width": "100%"},
                                             ),
@@ -172,8 +185,30 @@ def get_cam_layout():
                                         ),
                                         dbc.Col(
                                             dbc.Button(
-                                                "Disconnect",
-                                                id="cam-unlink",
+                                                "Stop",
+                                                id="cam-stop",
+                                                color="dark",
+                                                style={"width": "100%"},
+                                            ),
+                                            className="mb-3",
+                                        ),
+                                    ]
+                                ),
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            dbc.Button(
+                                                "Streaming",
+                                                id="cam-stream",
+                                                color="light",
+                                                style={"width": "100%"},
+                                            ),
+                                            className="mb-3",
+                                        ),
+                                        dbc.Col(
+                                            dbc.Button(
+                                                "Streaming Reset",
+                                                id="stream-reset",
                                                 color="dark",
                                                 style={"width": "100%"},
                                             ),
@@ -184,7 +219,7 @@ def get_cam_layout():
                                 dbc.Row(
                                     dbc.InputGroup(
                                         [
-                                            dbc.InputGroupText("Streaming status:"),
+                                            dbc.InputGroupText("Camera status:"),
                                             dbc.Textarea(
                                                 id="stream-status",
                                                 placeholder="Update streaming status",

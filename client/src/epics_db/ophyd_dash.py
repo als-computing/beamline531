@@ -34,6 +34,7 @@ class OphydDash:
             # self.update_status
         except Exception as e:
             logging.error(f"Could not connect component {self.name} due to: {e}")
+        pass
 
     def set_settle_time(self, settleTime=0.05):
         """

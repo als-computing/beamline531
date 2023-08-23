@@ -2,7 +2,7 @@ import logging
 import os
 
 import dash
-from dash import Dash, html, dash_table
+from dash import Dash, html, dash_table, dcc
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, MATCH, ALL
 import pandas as pd
@@ -38,7 +38,8 @@ def get_beamline():
         raise BeamlineNotFound(f'Status code: {response.status_code}')
     beamline = response.json()
     beamline_comps = beamline['components']
-    return beamline.pop('components'), pd.DataFrame(beamline_comps)
+    beamline_df = pd.DataFrame(beamline_comps)
+    return beamline.pop('components'), beamline_df.drop(['args'], axis=1)
 
 
 def update_beamline(modify_components=[], add_components=[], remove_components=[]):
@@ -54,6 +55,7 @@ def update_beamline(modify_components=[], add_components=[], remove_components=[
 
 # Get init information to display
 beamline_info, df_beamline = get_beamline()
+
 
 ### BEGIN DASH CODE ###
 # APP HEADER
@@ -105,13 +107,18 @@ header = dbc.Navbar(
 ## CONTENTS
 contents = dbc.Card([
                 dbc.Row([
-                    dbc.Button('Update database',
+                    dbc.Button('Save changes to database',
                                id='update-db',
                                color='success',
                                style={'width': '30%', 'margin-bottom': '1rem'}),
-                    dbc.Button('Update table',
+                    dbc.Button('Refresh table from database',
                                id='update-table',
                                color='success',
+                               style={'width': '30%', 'margin-bottom': '1rem'}),
+                    dbc.Button('Add new component',
+                               id='add-new-comp',
+                               color='success',
+                               disabled=True,
                                style={'width': '30%', 'margin-bottom': '1rem'})
                 ]),
                 dbc.Row([
@@ -156,6 +163,22 @@ contents = dbc.Card([
                     id="message-modal",
                     is_open=False,
                     ),
+                    dbc.Modal([
+                        dbc.ModalHeader("Add new component"),
+                        dbc.ModalBody(id="new-comp"),
+                        dbc.ModalFooter([
+                            dbc.Button(
+                                "OK", 
+                                id="confirm-add-new-comp", 
+                                outline=False,
+                                className="ms-auto", 
+                                n_clicks=0
+                            ),
+                        ]),
+                    ],
+                    id="new-comp-modal",
+                    is_open=False,
+                    ),
                 ]),
             ],
             # fluid=True
@@ -167,6 +190,7 @@ app.layout = html.Div(
         header,
         contents
     ])
+
 
 ## CALLBACKS
 @app.callback(
@@ -206,6 +230,36 @@ def update_database(update_db, update_table, is_open, table_data):
         else:
             return dash.no_update, dash.no_update, dash.no_update
     return df_bl_comps.to_dict('records'), dash.no_update, dash.no_update
+
+
+@app.callback(
+    Output('new-comp', 'children'),
+    Output('new-comp-modal', 'is_open'),
+
+    Input('confirm-add-new-comp', 'n_clicks'),
+    Input('add-new-comp', 'n_clicks'),
+
+    State('new-comp-modal', 'is_open'),
+    State('comp-table', 'data')
+)
+def add_new_row(confirm_add_new_comp_n_clicks, add_new_comp_n_clicks, new_comp_modal_is_open, comp_table):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'add-new-comp' in changed_id:
+        keys = list(comp_table[0].keys())
+        values = list(comp_table[0].values())
+        comps = []
+        for key, value in zip(keys, values):
+            if type(value) == str:
+                input_type = 'text'
+            else:
+                input_type = 'number'
+            comps += [
+                dbc.Label(key),
+                dcc.Input(type=input_type)
+            ]
+        return dbc.Col(comps), True
+    else:
+        return dash.no_update, False
 
 
 if __name__ == '__main__':

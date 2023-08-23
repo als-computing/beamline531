@@ -11,6 +11,7 @@ DEFAULT_TIME = datetime.utcnow()
 
 ## Auth-related classes
 
+
 class APIClient(BaseModel):
     hashed_key: str = Field(description="API key that can be given to a client")
     client: str = Field(description="Name of client who key is given to")
@@ -19,10 +20,13 @@ class APIClient(BaseModel):
 
 ## Beamline-related classes
 
+
 class DeviceType(str, Enum):
     control = "ophyd.EpicsMotor"
     signal = "ophyd.EpicsSignal"
     detector = "ophyd.AreaDetector"
+    andorcam = "ophyd.areadetector.detectors.AndorDetector"
+    pilatuscam = "ophyd.areadetector.detectors.PilatusDetector"
 
 
 class BeamlineComponent(BaseModel):
@@ -40,7 +44,7 @@ class BeamlineComponent(BaseModel):
     unit: Optional[str] = Field(description="unit")
     z: Optional[float] = Field(description="")
     port: Optional[str] = Field(description="port connection")
-    args: Optional[Any]    
+    args: Optional[Any]
 
 
 class Beamline(BaseModel):
@@ -50,6 +54,7 @@ class Beamline(BaseModel):
     creation: datetime = DEFAULT_TIME
     last_edit: datetime = DEFAULT_TIME
     components: Optional[List[BeamlineComponent]] = []
+
     class Config:
         extra = Extra.ignore
 
