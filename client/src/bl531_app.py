@@ -109,13 +109,6 @@ class bl531App:
         self.app.title = title
         self.app._favicon = favicon
 
-        # ### SETUP CLIENT CALLBACK
-        # self.app.clientside_callback(
-        #     ClientsideFunction(namespace="clientside", function_name="update_graph"),
-        #     Output("stream-status", "value"),
-        #     Input("ws", "message"),
-        # )
-
 
 if __name__ == "__main__":
     bl531_gui = bl531App()
