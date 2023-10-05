@@ -8,7 +8,7 @@ from dash_extensions import WebSocket
 def get_cam_layout(cam_list):
     cam_name_list = cam_list.comp_id_list
     cam_trigger_mode = ["Single", "Multiple", "Continous"]
-    url = None
+    url = 'ws://localhost:8000/ws/pva' #'ws://streamer_api:8000/ws/pva'
     cam_layout = [
         dbc.CardHeader("Camera"),
         dbc.CardBody(
@@ -245,7 +245,8 @@ def get_cam_layout(cam_list):
                                     dcc.Graph(
                                         id="bl-cam",
                                         figure=px.imshow(img=np.zeros((1024, 1024))),
-                                    )
+                                    ),
+                                    html.Div(id="render-time"),
                                 ]
                             ),
                         ),

@@ -2,9 +2,8 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
     clientside: {
         update_graph: function (msg) {
             if (!msg) { return {}; }  // no data, just return
-            console.log("||| I am here |||")
             const startTime = performance.now();
-            const data = JSON.parse(msg.data);  // read the data
+            const data = JSON.parse(JSON.parse(msg.data));  // read the data
             const x_dim = data.x;
             const y_dim = data.y;
             const xval = arange(x_dim);
@@ -15,8 +14,6 @@ window.dash_clientside = Object.assign({}, window.dash_clientside, {
             const plot = document.getElementById('bl-cam');
 
             let img = data.img;
-            img = vectorTo2DArray(img, [y_dim, x_dim])
-
             const layout = {
                 title: figtitle,
                 xaxis: { title: 'Pixel', scaleratio: 1, scaleanchor: 'y' },
@@ -53,7 +50,7 @@ function vectorTo2DArray(vector, dimensions) {
         }
         ndarray.push(subArray);
     }
-
+    console.log(ndarray)
     return ndarray;
 }
 

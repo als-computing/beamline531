@@ -30,7 +30,7 @@ def camControl(app, cam_list):
         options = []
         exp_time, xpix_st, xpix_ed, ypix_st, ypix_ed = 0, 0, 0, 0, 0
         cam = getCamOphyd(cam_name)
-        stream_url = "ws://streamer_api:8000/ws/pva"
+        stream_url = 'ws://localhost:8000/ws/pva' #"ws://streamer_api:8000/ws/pva"
         # cam_ophyd_dash = cam_list.find_component(cam_name)
         # cam_ophyd = cam_ophyd_dash.ophyd_obj
         # cam = cam_ophyd.cam
@@ -41,7 +41,7 @@ def camControl(app, cam_list):
                 {"label": l, "value": i}
                 for i, l in enumerate(image_mode.metadata["enum_strs"])
             ]
-            stream_url = "ws://streamer_api:8000/ws/pva"
+            stream_url = 'ws://localhost:8000/ws/pva' #"ws://streamer_api:8000/ws/pva"
             # stream_url = f"ws://127.0.0.1:8000/ws/{cam_name}"
             exp_time = cam.acquire_time.get()
             xpix_st = cam.min_x.get()
