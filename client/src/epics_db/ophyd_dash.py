@@ -60,11 +60,16 @@ class OphydDash:
         Update motor status
 
         """
-        self.status = "Online" if self.ophyd_obj.connected else "Offline"
-        if self.type == "ophyd.EpicsMotor":
-            self._update_motor()
-        elif self.type == "ophyd.EpicsSignal":
-            self._update_signal()
+        if self.ophyd_obj is not None:
+            self.status = "Online" if self.ophyd_obj.connected else "Offline"
+            if self.type == "ophyd.EpicsMotor":
+                self._update_motor()
+            elif self.type == "ophyd.EpicsSignal":
+                self._update_signal()
+        else:
+            self.status = "Offline"
+            self.unit = "None"
+            self.position = 0
 
     def _update_motor(self):
         if self.ophyd_obj is not None:

@@ -38,7 +38,9 @@ def get_beamline():
         raise BeamlineNotFound(f'Status code: {response.status_code}')
     beamline = response.json()
     beamline_comps = beamline['components']
-    return beamline.pop('components'), pd.DataFrame(beamline_comps)
+    df_beamline = pd.DataFrame(beamline_comps)
+    df_beamline = df_beamline.drop(columns=['args'])
+    return beamline.pop('components'), df_beamline
 
 
 def update_beamline(modify_components=[], add_components=[], remove_components=[]):
@@ -120,7 +122,7 @@ contents = dbc.Card([
                         data=[],
                         columns=[{'id': p, 'name': p, 'editable': False} if p in ['creation', 'last_edit']
                                 else {'id': p, 'name': p, 'editable': True}
-                                for p in df_beamline],
+                                for p in df_beamline.columns],
                         hidden_columns=['uid', 'schema_version'],
                         css=[{"selector": ".show-hide", "rule": "display: none"}],
                         style_header={'position': 'sticky', 'top': 0},
@@ -205,7 +207,8 @@ def update_database(update_db, update_table, is_open, table_data):
             return dash.no_update, msg_info, not is_open
         else:
             return dash.no_update, dash.no_update, dash.no_update
-    return df_bl_comps.to_dict('records'), dash.no_update, dash.no_update
+    comp_list = df_bl_comps.to_dict('records')
+    return comp_list, dash.no_update, dash.no_update
 
 
 if __name__ == '__main__':

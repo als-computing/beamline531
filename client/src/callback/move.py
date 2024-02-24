@@ -1,4 +1,5 @@
 from dash.dependencies import Input, Output, State, MATCH
+from dash.exceptions import PreventUpdate
 
 
 def move_callback(app, component_list):
@@ -38,6 +39,8 @@ def move_callback(app, component_list):
         """
         component_name = target_id["base"]
         component_ophyd = component_list.find_component(component_name)
+        if component_ophyd.status != "Online":
+            raise PreventUpdate
         current_pos = component_ophyd.ophyd_obj.position
         if target_go:
             target_pos = target_absolute
